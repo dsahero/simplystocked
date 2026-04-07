@@ -1,0 +1,7 @@
+{
+  "name": "SimplyStocked",
+  "description": "A professional food bank inventory management system with AI-powered invoice processing and predictive analytics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
