@@ -19,9 +19,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+      },
+      operationType,
+      path
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  };
 
   useEffect(() => {
     // Check for mock session first
@@ -33,40 +57,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // 1. Try to fetch user data from Firestore by UID
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        
-        if (userDoc.exists()) {
-          setUser(userDoc.data() as User);
-        } else {
-          // 2. If not found by UID, try to find by email
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('email', '==', firebaseUser.email));
-          const querySnapshot = await getDocs(q);
+      try {
+        if (firebaseUser) {
+          // 1. Try to fetch user data from Firestore by UID
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           
-          if (!querySnapshot.empty) {
-            // Found an existing user with this email
-            const existingUserData = querySnapshot.docs[0].data() as User;
-            
-            // Update the user data with the new Firebase UID
-            const updatedUser: User = {
-              ...existingUserData,
-              id: firebaseUser.uid,
-              avatarUrl: firebaseUser.photoURL || existingUserData.avatarUrl,
-              name: firebaseUser.displayName || existingUserData.name,
-            };
-            
-            await setDoc(doc(db, 'users', firebaseUser.uid), updatedUser);
-            setUser(updatedUser);
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as User);
           } else {
-            // 3. ACCESS DENIED: User is not in the system
-            // We sign them out immediately
-            await signOut(auth);
-            setUser(null);
+            // 2. If not found by UID, try to find by email
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('email', '==', firebaseUser.email));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              // Found an existing user with this email
+              const existingUserData = querySnapshot.docs[0].data() as User;
+              
+              // Update the user data with the new Firebase UID
+              const updatedUser: User = {
+                ...existingUserData,
+                id: firebaseUser.uid,
+                avatarUrl: firebaseUser.photoURL || existingUserData.avatarUrl,
+                name: firebaseUser.displayName || existingUserData.name,
+              };
+              
+              await setDoc(doc(db, 'users', firebaseUser.uid), updatedUser);
+              setUser(updatedUser);
+            } else {
+              // 3. ACCESS DENIED: User is not in the system
+              // We sign them out immediately
+              await signOut(auth);
+              setUser(null);
+            }
           }
+        } else {
+          setUser(null);
         }
-      } else {
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, 'users');
         setUser(null);
       }
       setIsAuthReady(true);
@@ -121,6 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Google sign-in error:', error);
+      if (error instanceof Error && !error.message.includes('not registered')) {
+        handleFirestoreError(error, OperationType.GET, 'users (google login check)');
+      }
       throw error;
     }
   };
@@ -132,9 +164,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    const updatedUser = { ...user, ...updates };
-    await setDoc(doc(db, 'users', user.id), updatedUser, { merge: true });
-    setUser(updatedUser);
+    try {
+      const updatedUser = { ...user, ...updates };
+      await setDoc(doc(db, 'users', user.id), updatedUser, { merge: true });
+      setUser(updatedUser);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
+      throw error;
+    }
   };
 
   const changePassword = async (newPassword: string) => {

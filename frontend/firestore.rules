@@ -6,21 +6,49 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: users
-    // Document ID: {userId} (Firebase Auth UID)
-    // Fields:
-    //   - id: string (required) - Firebase Auth UID
-    //   - name: string (required) - Display name
-    //   - email: string (required, email format) - User email
-    //   - role: string (required, enum: ['admin', 'user', 'guest']) - User role
-    //   - avatarUrl: string (optional) - Profile picture URL
-    //   - studentPid: string (optional) - Optional student PID
+    // Fields: id, username, email, role, avatarUrl
+    //
+    // Collection: products
+    // Fields: id, productName, productPrice, categoryId, brandId, nutritionId, stockLevelId
+    //
+    // Collection: stockLevels
+    // Fields: id, quantity, stockSnapshot, lastUpdated, groceryStoreQuantity, openMarketQuantity
+    //
+    // Collection: nutrition
+    // Fields: id, calories, protein, fiber
+    //
+    // Collection: categories
+    // Fields: id, categoryName, description
+    //
+    // Collection: brands
+    // Fields: id, brandName
+    //
+    // Collection: transactions
+    // Fields: id, date
+    //
+    // Collection: transactionItems
+    // Fields: id, transactionId, foodProductId, quantity, productPrice
+    //
+    // Collection: checkpoints
+    // Fields: id, startDate, endDate
+    //
+    // Collection: invoices
+    // Fields: id, date, totalPrice, vendorId
+    //
+    // Collection: invoiceItems
+    // Fields: id, invoiceId, foodProductId, quantity, unitPrice
+    //
+    // Collection: invoiceAddresses
+    // Fields: id, address, city, state, zip, phone, email, attn
+    //
+    // Collection: vendors
+    // Fields: id, vendorName
     //
     // ===============================================================
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -29,26 +57,43 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email == "PUNSPUNS234@gmail.com" && 
+             request.auth.token.email_verified == true;
+    }
+
     function isAdmin() {
-      return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "PUNSPUNS234@gmail.com" && request.auth.token.email_verified == true));
+      return isAuthenticated() && 
+        (isSuperAdmin() || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function isValidEmail(email) {
-      return email is string &&
-        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    // ===============================================================
+    // Validation Functions
+    // ===============================================================
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
-             data.keys().hasOnly(['id', 'name', 'email', 'role', 'avatarUrl', 'studentPid']) &&
+      return data.keys().hasAll(['id', 'email', 'role']) &&
              data.id is string &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              isValidEmail(data.email) &&
-             data.role in ['admin', 'user', 'guest'] &&
-             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() < 500)) &&
-             (!('studentPid' in data) || (data.studentPid is string && data.studentPid.size() < 20));
+             data.role in ['admin', 'user'] &&
+             (!('avatarUrl' in data) || data.avatarUrl is string);
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'productName', 'productPrice']) &&
+             data.id is string &&
+             isValidString(data.productName, 1, 100) &&
+             data.productPrice is number;
     }
 
     // ===============================================================
@@ -57,25 +102,101 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      
-      allow create: if isAuthenticated() && 
-                      isOwner(userId) && 
-                      isValidUser(request.resource.data) &&
-                      (request.resource.data.role == 'user' || isAdmin());
-                      
-      allow update: if isAuthenticated() && 
-                      isValidUser(request.resource.data) &&
-                      (
-                        (isOwner(userId) && request.resource.data.role == resource.data.role) || 
-                        isAdmin()
-                      );
-                      
+      allow create: if isAuthenticated() && (isOwner(userId) || isSuperAdmin());
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
       allow delete: if isAdmin();
     }
 
-    // Default deny
-    match /{path=**} {
-      allow read, write: if false;
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /stockLevels/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /nutrition/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /categories/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /brands/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /transactions/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /transactionItems/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /checkpoints/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /invoices/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /invoiceItems/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /invoiceAddresses/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /vendors/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /locations/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /checkouts/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /analytics/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /dailyChecklists/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /locations/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /buyList/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
   }
 }

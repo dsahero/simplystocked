@@ -67,9 +67,12 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="relative">
                   {user?.avatarUrl ? (
                     <img
-                      src={user.avatarUrl}
+                      src={user.avatarUrl || '/icons/default-pfp.jpg'}
                       alt="Profile"
                       className="h-10 w-10 rounded-[16px] border-2 border-white dark:border-neutral-800 shadow-md object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+                      }}
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-[16px] border-2 border-white dark:border-neutral-800 shadow-md bg-forest/5 flex items-center justify-center text-forest/20">

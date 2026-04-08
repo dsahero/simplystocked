@@ -16,10 +16,10 @@ export default function SettingsPage() {
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' as UserRole });
   
   const [users, setUsers] = useState<UserType[]>([
-    { id: '1', name: 'Alex Admin', email: 'alex@university.edu', role: 'admin', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' },
-    { id: '2', name: 'Sarah Staff', email: 'sarah@university.edu', role: 'user', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' },
-    { id: '3', name: 'Mike Volunteer', email: 'mike@university.edu', role: 'user', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike' },
-    { id: '4', name: 'Jane Guest', email: 'jane@university.edu', role: 'guest', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane' },
+    { id: '1', name: 'Alex Admin', email: 'alex@university.edu', role: 'admin', avatarUrl: '/icons/default-pfp.jpg' },
+    { id: '2', name: 'Sarah Staff', email: 'sarah@university.edu', role: 'user', avatarUrl: '/icons/default-pfp.jpg' },
+    { id: '3', name: 'Mike Volunteer', email: 'mike@university.edu', role: 'user', avatarUrl: '/icons/default-pfp.jpg' },
+    { id: '4', name: 'Jane Guest', email: 'jane@university.edu', role: 'guest', avatarUrl: '/icons/default-pfp.jpg' },
   ]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +52,7 @@ export default function SettingsPage() {
       name: newUser.name,
       email: newUser.email,
       role: newUser.role,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newUser.email}`,
+      avatarUrl: '/icons/default-pfp.jpg',
     };
     setUsers([...users, userToAdd]);
     setIsAddUserModalOpen(false);
@@ -155,7 +155,14 @@ export default function SettingsPage() {
                   {filteredUsers.map((u) => (
                     <div key={u.id} className="flex items-center justify-between p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                       <div className="flex items-center gap-4">
-                        <img src={u.avatarUrl} alt={u.name} className="h-10 w-10 rounded-full border border-neutral-200 dark:border-neutral-700" />
+                        <img 
+                          src={u.avatarUrl || '/icons/default-pfp.jpg'} 
+                          alt={u.name} 
+                          className="h-10 w-10 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+                          }}
+                        />
                         <div>
                           <p className="font-bold text-neutral-900 dark:text-white">{u.name} {u.id === currentUser?.id && <span className="text-xs font-normal text-neutral-400 ml-1">(You)</span>}</p>
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">

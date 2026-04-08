@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { BarChart2, DollarSign, TrendingUp, ShoppingCart, Plus, Trash2, ArrowRight, AlertCircle, MapPin, CheckCircle2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { BarChart2, DollarSign, TrendingUp, ShoppingCart, Plus, Trash2, ArrowRight, AlertCircle, MapPin, CheckCircle2, Sparkles, Download, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useInventory } from '../contexts/InventoryContext';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import Markdown from 'react-markdown';
 
 type TabType = 'analytics' | 'cost' | 'prediction' | 'trends' | 'buylist';
 
@@ -11,7 +13,38 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('analytics');
   const [isAddingToBuyList, setIsAddingToBuyList] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', quantity: '', unit: 'units' });
-  const { items, locations, analytics, checkouts, buyList, addToBuyList, removeFromBuyList, clearBuyList } = useInventory();
+  const [aiInsights, setAiInsights] = useState<string>('');
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
+  
+  const { items, locations, analytics, checkouts, buyList, addToBuyList, removeFromBuyList, clearBuyList, getAIInsights, seedTestData } = useInventory();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (activeTab === 'prediction' && !aiInsights) {
+      fetchInsights();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (seedError) {
+      const timer = setTimeout(() => setSeedError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [seedError]);
+
+  const fetchInsights = async () => {
+    setIsLoadingInsights(true);
+    try {
+      const insights = await getAIInsights();
+      setAiInsights(insights);
+    } catch (err) {
+      setAiInsights("Unable to load insights.");
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
 
   const tabs = [
     { id: 'analytics', name: 'Analytics', icon: BarChart2 },
@@ -45,7 +78,7 @@ export default function AnalyticsPage() {
           priority
         };
       })
-      .filter(item => item.totalQuantity < item.minStockLevel * 2 || item.demandScore > 50)
+      .filter(item => (item.totalQuantity < item.minStockLevel * 2 || item.demandScore > 50) && !buyList.some(bi => bi.name === item.name))
       .sort((a, b) => b.priority - a.priority)
       .slice(0, 6);
   }, [items, checkouts]);
@@ -61,9 +94,69 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-display font-bold tracking-tight text-forest dark:text-white">Analytics & Insights</h1>
-        <p className="text-forest/60 dark:text-neutral-400">Data-driven insights for your food bank operations.</p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight text-forest dark:text-white">Analytics & Insights</h1>
+          <p className="text-forest/60 dark:text-neutral-400">Data-driven insights for your food bank operations.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button 
+              onClick={async () => {
+                setSeedError(null);
+                setIsSeeding(true);
+                try {
+                  await seedTestData();
+                } catch (err) {
+                  setSeedError(err instanceof Error ? err.message : 'Seeding failed');
+                } finally {
+                  setIsSeeding(false);
+                }
+              }}
+              disabled={isSeeding}
+              className="flex items-center gap-2 rounded-2xl bg-brown/10 dark:bg-brown/20 px-6 py-3 text-sm font-bold text-brown hover:bg-brown/20 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-5 w-5", isSeeding && "animate-spin")} />
+              {isSeeding ? 'Seeding...' : 'Seed Test Data'}
+            </button>
+            
+            <AnimatePresence>
+              {seedError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full right-0 mt-2 w-64 rounded-xl bg-red-50 dark:bg-red-900/20 p-3 text-xs font-bold text-red-600 border border-red-100 dark:border-red-900/30 z-50 shadow-xl"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {seedError}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <button 
+            onClick={() => {
+              const report = `SimplyStocked Inventory Report - ${new Date().toLocaleDateString()}\n\n` +
+                `Total Items: ${items.length}\n` +
+                `Total Value: $${items.reduce((acc, i) => acc + (i.totalQuantity * i.costPerUnit), 0).toFixed(2)}\n` +
+                `Low Stock Items: ${items.filter(i => i.totalQuantity < i.minStockLevel).length}\n\n` +
+                `Buy List:\n${buyList.map(i => `- ${i.name}: ${i.quantity} ${i.unit}`).join('\n')}`;
+              
+              const blob = new Blob([report], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `simplystocked-report-${new Date().toISOString().split('T')[0]}.txt`;
+              a.click();
+            }}
+            className="flex items-center gap-2 rounded-2xl bg-forest/5 dark:bg-neutral-800 px-6 py-3 text-sm font-bold text-forest dark:text-white hover:bg-forest/10 transition-all active:scale-95"
+          >
+            <Download className="h-5 w-5" />
+            Export Report
+          </button>
+        </div>
       </header>
 
       {/* Navigation Tabs */}
@@ -218,16 +311,38 @@ export default function AnalyticsPage() {
 
         {activeTab === 'prediction' && (
           <div className="space-y-8">
-            <div className="rounded-[40px] border border-brown/10 dark:border-brown/30 bg-brown/5 dark:bg-brown/10 p-8">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="rounded-[20px] bg-brown p-3 text-white">
-                  <TrendingUp className="h-7 w-7" />
-                </div>
-                <h2 className="text-2xl font-display font-bold text-forest dark:text-white">Demand Forecasting</h2>
+            <div className="rounded-[40px] border border-brown/10 dark:border-brown/30 bg-brown/5 dark:bg-brown/10 p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Sparkles className="h-32 w-32 text-brown" />
               </div>
-              <p className="text-sm text-forest/60 dark:text-neutral-400 max-w-2xl font-medium leading-relaxed">
-                AI-driven analysis of popularity and predicted needs based on checkout trends and stock levels.
-              </p>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="rounded-[20px] bg-brown p-3 text-white">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-forest dark:text-white">AI Inventory Insights</h2>
+                  </div>
+                  <button 
+                    onClick={fetchInsights}
+                    disabled={isLoadingInsights}
+                    className="rounded-xl p-2 hover:bg-brown/10 text-brown transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn("h-5 w-5", isLoadingInsights && "animate-spin")} />
+                  </button>
+                </div>
+                
+                {isLoadingInsights ? (
+                  <div className="flex items-center gap-3 text-brown font-bold animate-pulse">
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    Analyzing inventory patterns...
+                  </div>
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-forest/80 dark:text-neutral-300 font-medium">
+                    <Markdown>{aiInsights}</Markdown>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
