@@ -74,20 +74,20 @@ export default function UploadInvoicesPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-10">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Upload Invoices</h1>
-        <p className="text-neutral-500">Extract inventory data from images or text using AI.</p>
+        <h1 className="text-3xl font-display font-bold tracking-tight text-forest dark:text-white">Upload Invoices</h1>
+        <p className="text-forest/60 dark:text-neutral-400 font-medium">Extract inventory data from images or text using AI.</p>
       </header>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         {/* Image Upload */}
-        <div className="rounded-3xl border-2 border-dashed border-neutral-200 bg-white p-8 text-center hover:border-orange-500 transition-all group">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 group-hover:scale-110 transition-transform">
-            <ImageIcon className="h-8 w-8" />
+        <div className="rounded-[40px] border-2 border-dashed border-forest/10 bg-white dark:bg-neutral-900 p-10 text-center hover:border-brown transition-all group cursor-pointer shadow-sm">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-forest/5 text-forest group-hover:scale-110 group-hover:bg-forest group-hover:text-white transition-all duration-500">
+            <ImageIcon className="h-10 w-10" />
           </div>
-          <h3 className="mt-4 text-lg font-bold">Upload Image</h3>
-          <p className="mt-2 text-sm text-neutral-500">Upload a photo or scan of your invoice (JPG, PNG).</p>
+          <h3 className="mt-6 text-xl font-display font-bold text-forest dark:text-white">Upload Image</h3>
+          <p className="mt-2 text-sm text-forest/40 dark:text-neutral-400 font-medium leading-relaxed">Upload a photo or scan of your invoice (JPG, PNG).</p>
           <input
             type="file"
             ref={fileInputRef}
@@ -98,30 +98,30 @@ export default function UploadInvoicesPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
-            className="mt-6 w-full rounded-xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50 transition-all"
+            className="mt-8 w-full rounded-2xl bg-forest dark:bg-white px-6 py-4 text-sm font-bold text-white dark:text-neutral-900 hover:bg-forest-dark dark:hover:bg-neutral-100 shadow-xl shadow-forest/10 transition-all active:scale-95 disabled:opacity-50"
           >
             Select Image
           </button>
         </div>
 
         {/* Text Paste */}
-        <div className="rounded-3xl border border-neutral-200 bg-white p-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <FileText className="h-5 w-5" />
+        <div className="rounded-[40px] border border-forest/5 bg-white dark:bg-neutral-900 p-10 shadow-sm">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-forest/5 text-forest">
+              <FileText className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold">Paste Raw Text</h3>
+            <h3 className="text-xl font-display font-bold text-forest dark:text-white">Paste Raw Text</h3>
           </div>
           <textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
             placeholder="Paste invoice details here..."
-            className="h-32 w-full rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+            className="h-40 w-full rounded-[24px] border border-forest/10 dark:border-neutral-800 bg-cream/30 dark:bg-neutral-950 p-6 text-sm font-bold placeholder-forest/20 focus:border-brown focus:bg-white dark:focus:bg-neutral-900 focus:outline-none focus:ring-4 focus:ring-brown/5 transition-all dark:text-white resize-none"
           />
           <button
             onClick={handleTextSubmit}
             disabled={isProcessing || !rawText.trim()}
-            className="mt-4 w-full rounded-xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50 transition-all"
+            className="mt-6 w-full rounded-2xl bg-forest dark:bg-white px-6 py-4 text-sm font-bold text-white dark:text-neutral-900 hover:bg-forest-dark dark:hover:bg-neutral-100 shadow-xl shadow-forest/10 transition-all active:scale-95 disabled:opacity-50"
           >
             Process Text
           </button>
@@ -129,17 +129,22 @@ export default function UploadInvoicesPage() {
       </div>
 
       {isProcessing && (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-orange-600" />
-          <p className="text-lg font-medium text-neutral-900">AI is processing your invoice...</p>
-          <p className="text-sm text-neutral-500">This usually takes a few seconds.</p>
+        <div className="flex flex-col items-center justify-center py-16 space-y-6">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-brown/20 animate-ping" />
+            <Loader2 className="h-16 w-16 animate-spin text-brown relative z-10" />
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-display font-bold text-forest dark:text-white">AI is processing your invoice...</p>
+            <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">This usually takes a few seconds.</p>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-red-600 border border-red-100">
-          <AlertCircle className="h-5 w-5" />
-          <p className="text-sm font-medium">{error}</p>
+        <div className="flex items-center gap-4 rounded-[24px] bg-red-50 dark:bg-red-900/20 p-6 text-brown dark:text-red-400 border border-red-100 dark:border-red-900/30 shadow-sm">
+          <AlertCircle className="h-6 w-6" />
+          <p className="text-sm font-bold">{error}</p>
         </div>
       )}
 
@@ -151,85 +156,129 @@ export default function UploadInvoicesPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[100] bg-forest/40 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold">Review Extracted Data</h2>
-                  <p className="text-sm text-neutral-500">Verify and correct the AI-extracted information.</p>
+                  <h2 className="text-3xl font-display font-bold text-forest dark:text-white">Review Data</h2>
+                  <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium">Verify and correct the AI-extracted information.</p>
                 </div>
-                <button onClick={() => setReviewData(null)} className="rounded-lg p-2 hover:bg-neutral-100 transition-colors">
-                  <X className="h-5 w-5" />
+                <button onClick={() => setReviewData(null)} className="rounded-2xl p-3 hover:bg-forest/5 dark:hover:bg-neutral-800 transition-all active:scale-90">
+                  <X className="h-6 w-6 text-forest/40" />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
-                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Invoice Date</p>
-                    <p className="text-lg font-bold">{reviewData.date}</p>
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="rounded-[24px] border border-forest/5 bg-cream/30 dark:bg-neutral-800 p-6">
+                    <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mb-1">Invoice Date</p>
+                    <input
+                      type="date"
+                      value={reviewData.date}
+                      onChange={(e) => setReviewData({ ...reviewData, date: e.target.value })}
+                      className="text-xl font-display font-bold text-forest dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full"
+                    />
                   </div>
-                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
-                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Total Cost</p>
-                    <p className="text-lg font-bold">${reviewData.totalCost.toFixed(2)}</p>
+                  <div className="rounded-[24px] border border-forest/5 bg-cream/30 dark:bg-neutral-800 p-6">
+                    <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mb-1">Total Cost</p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xl font-display font-bold text-forest dark:text-white">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={reviewData.totalCost}
+                        onChange={(e) => setReviewData({ ...reviewData, totalCost: parseFloat(e.target.value) || 0 })}
+                        className="text-xl font-display font-bold text-forest dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-bold text-neutral-900">Extracted Items</h3>
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-forest dark:text-white">Extracted Items</h3>
                   {reviewData.items.map((item, idx) => (
-                    <div key={idx} className="rounded-2xl border border-neutral-200 p-4 space-y-4">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Item Name</label>
+                    <div key={idx} className="rounded-[32px] border border-forest/5 bg-white dark:bg-neutral-800 p-6 space-y-6 shadow-sm">
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Item Name</label>
                           <input
                             type="text"
-                            defaultValue={item.name}
-                            className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                            value={item.name}
+                            onChange={(e) => {
+                              const newItems = [...reviewData.items];
+                              newItems[idx].name = e.target.value;
+                              setReviewData({ ...reviewData, items: newItems });
+                            }}
+                            className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Qty</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Qty</label>
                             <input
                               type="number"
-                              defaultValue={item.quantity}
-                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...reviewData.items];
+                                newItems[idx].quantity = parseFloat(e.target.value) || 0;
+                                setReviewData({ ...reviewData, items: newItems });
+                              }}
+                              className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
                             />
                           </div>
-                          <div>
-                            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Cost</label>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Cost</label>
                             <input
                               type="number"
-                              defaultValue={item.cost}
-                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                              step="0.01"
+                              value={item.cost}
+                              onChange={(e) => {
+                                const newItems = [...reviewData.items];
+                                newItems[idx].cost = parseFloat(e.target.value) || 0;
+                                setReviewData({ ...reviewData, items: newItems });
+                              }}
+                              className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
                             />
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <label className="flex items-center gap-2 text-sm font-medium text-neutral-700">
-                            <input type="checkbox" defaultChecked={item.isPerishable} className="rounded border-neutral-300 text-orange-600 focus:ring-orange-500" />
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-3 text-sm font-bold text-forest/60 dark:text-neutral-300 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={item.isPerishable} 
+                              onChange={(e) => {
+                                const newItems = [...reviewData.items];
+                                newItems[idx].isPerishable = e.target.checked;
+                                setReviewData({ ...reviewData, items: newItems });
+                              }}
+                              className="h-5 w-5 rounded-lg border-forest/10 text-brown focus:ring-brown" 
+                            />
                             Perishable
                           </label>
                           {item.isPerishable && (
                             <input
                               type="date"
-                              defaultValue={item.expirationDate}
-                              className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                              value={item.expirationDate}
+                              onChange={(e) => {
+                                const newItems = [...reviewData.items];
+                                newItems[idx].expirationDate = e.target.value;
+                                setReviewData({ ...reviewData, items: newItems });
+                              }}
+                              className="rounded-xl border border-forest/10 bg-cream/20 px-4 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5"
                             />
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-neutral-400" />
-                          <select className="rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="h-5 w-5 text-forest/20" />
+                          <select className="rounded-xl border border-forest/10 bg-cream/20 px-4 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5">
                             {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
                           </select>
                         </div>
@@ -239,19 +288,19 @@ export default function UploadInvoicesPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-4 mt-10">
                 <button
                   onClick={() => setReviewData(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 transition-colors"
+                  className="rounded-2xl px-8 py-4 text-sm font-bold text-forest/40 hover:bg-forest/5 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCommit}
-                  className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all"
+                  className="flex items-center gap-3 rounded-2xl bg-brown px-10 py-4 text-sm font-bold text-white shadow-xl shadow-brown/20 hover:bg-brown-dark transition-all active:scale-95"
                 >
-                  <CheckCircle className="h-4 w-4" />
-                  Confirm & Add to Inventory
+                  <CheckCircle className="h-5 w-5" />
+                  Confirm & Add
                 </button>
               </div>
             </motion.div>

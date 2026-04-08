@@ -48,12 +48,12 @@ export default function AIAssistant() {
             initial={{ opacity: 0, scale: 0.9, y: 20, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-2xl shadow-orange-200/50"
+            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-2xl shadow-brown/20"
           >
             {/* Header */}
             <div className="bg-neutral-900 p-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brown">
                   <Bot className="h-5 w-5" />
                 </div>
                 <div>
@@ -73,7 +73,7 @@ export default function AIAssistant() {
                   <div className={cn(
                     "max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm",
                     msg.role === 'user' 
-                      ? "bg-orange-600 text-white rounded-tr-none" 
+                      ? "bg-brown text-white rounded-tr-none" 
                       : "bg-white text-neutral-900 border border-neutral-100 rounded-tl-none"
                   )}>
                     {msg.content}
@@ -83,7 +83,7 @@ export default function AIAssistant() {
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-white border border-neutral-100 rounded-2xl rounded-tl-none px-4 py-2 shadow-sm">
-                    <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                    <Loader2 className="h-4 w-4 animate-spin text-brown" />
                   </div>
                 </div>
               )}
@@ -98,12 +98,12 @@ export default function AIAssistant() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Ask a question..."
-                  className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                  className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 transition-all"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700 disabled:opacity-50 transition-all"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-brown text-white shadow-lg shadow-brown/20 hover:bg-brown-dark disabled:opacity-50 transition-all"
                 >
                   <Send className="h-4 w-4" />
                 </button>
@@ -123,7 +123,7 @@ export default function AIAssistant() {
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-all",
-          isOpen ? "bg-neutral-900 text-white" : "bg-orange-600 text-white shadow-orange-200"
+          isOpen ? "bg-neutral-900 text-white" : "bg-brown text-white shadow-brown/20"
         )}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}

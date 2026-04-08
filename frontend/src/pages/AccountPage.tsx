@@ -97,7 +97,7 @@ export default function AccountPage() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-orange-600 text-white shadow-lg hover:bg-orange-700 transition-all"
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-brown text-white shadow-lg hover:bg-brown-dark transition-all"
               >
                 <Camera className="h-4 w-4" />
               </button>
@@ -112,7 +112,7 @@ export default function AccountPage() {
             <div className="mt-4">
               <h2 className="font-bold text-lg dark:text-white">{user?.name}</h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">{user?.email}</p>
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-orange-100 dark:bg-orange-900/30 px-3 py-1 text-xs font-bold text-orange-700 dark:text-orange-400">
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brown/10 dark:bg-brown/20 px-3 py-1 text-xs font-bold text-brown dark:text-brown/80">
                 <Shield className="h-3 w-3" />
                 {user?.role.toUpperCase()}
               </div>
@@ -138,7 +138,7 @@ export default function AccountPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       disabled={user?.role !== 'admin'}
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50 dark:text-white transition-all"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 disabled:opacity-50 dark:text-white transition-all"
                     />
                   </div>
                   {user?.role !== 'admin' && (
@@ -188,7 +188,7 @@ export default function AccountPage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="At least 6 characters"
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function AccountPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repeat new password"
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
                 </div>
@@ -211,7 +211,7 @@ export default function AccountPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="rounded-xl bg-orange-600 px-6 py-2 text-sm font-semibold text-white hover:bg-orange-700 shadow-lg shadow-orange-200 dark:shadow-orange-900/20 transition-all"
+                  className="rounded-xl bg-brown px-6 py-2 text-sm font-semibold text-white hover:bg-brown-dark shadow-lg shadow-brown/20 dark:shadow-brown/40 transition-all"
                 >
                   Update Password
                 </button>

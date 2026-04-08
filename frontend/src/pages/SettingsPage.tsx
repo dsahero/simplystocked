@@ -99,7 +99,7 @@ export default function SettingsPage() {
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
               activeTab === 'users' 
-                ? "bg-orange-50 dark:bg-orange-900/20 font-bold text-orange-600" 
+                ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown" 
                 : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
             )}
           >
@@ -111,7 +111,7 @@ export default function SettingsPage() {
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
               activeTab === 'locations' 
-                ? "bg-orange-50 dark:bg-orange-900/20 font-bold text-orange-600" 
+                ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown" 
                 : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
             )}
           >
@@ -123,7 +123,7 @@ export default function SettingsPage() {
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
               activeTab === 'general' 
-                ? "bg-orange-50 dark:bg-orange-900/20 font-bold text-orange-600" 
+                ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown" 
                 : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
             )}
           >
@@ -139,16 +139,16 @@ export default function SettingsPage() {
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold dark:text-white">User Accounts</h2>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    <input
-                      type="text"
-                      placeholder="Search users..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all"
-                    />
-                  </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
+                      />
+                    </div>
                 </div>
 
                 <div className="space-y-4">
@@ -171,7 +171,7 @@ export default function SettingsPage() {
                             className={cn(
                               "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
                               u.role === 'admin' 
-                                ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50" 
+                                ? "bg-brown/10 dark:bg-brown/20 text-brown hover:bg-brown/20 dark:hover:bg-brown/30" 
                                 : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                             )}
                           >
@@ -182,7 +182,7 @@ export default function SettingsPage() {
                           <div className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
                             u.role === 'admin' 
-                              ? "bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400" 
+                              ? "bg-brown/5 dark:bg-brown/10 text-brown" 
                               : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400"
                           )}>
                             {u.role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
@@ -223,7 +223,7 @@ export default function SettingsPage() {
                       value={newLocationName}
                       onChange={(e) => setNewLocationName(e.target.value)}
                       placeholder="Location name (e.g. Warehouse B)"
-                      className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-4 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white"
+                      className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-4 py-2 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white"
                     />
                     <button
                       type="submit"
@@ -277,8 +277,8 @@ export default function SettingsPage() {
                     <button
                       onClick={toggleDarkMode}
                       className={cn(
-                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2",
-                        isDarkMode ? "bg-orange-600" : "bg-neutral-200"
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2",
+                        isDarkMode ? "bg-brown" : "bg-neutral-200"
                       )}
                     >
                       <span
@@ -300,7 +300,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-bold dark:text-white">Low Stock Alerts</p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">Notify admins when items fall below minimum stock level.</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-5 w-10 rounded-full bg-neutral-200 dark:bg-neutral-800 text-orange-600" />
+                    <input type="checkbox" defaultChecked className="h-5 w-10 rounded-full bg-neutral-200 dark:bg-neutral-800 text-brown" />
                   </label>
                   <div className="h-px bg-neutral-100 dark:bg-neutral-800" />
                   <label className="flex items-center justify-between cursor-pointer">
@@ -308,7 +308,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-bold dark:text-white">Expiration Warnings</p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">Notify staff 7 days before an item expires.</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-5 w-10 rounded-full bg-neutral-200 dark:bg-neutral-800 text-orange-600" />
+                    <input type="checkbox" defaultChecked className="h-5 w-10 rounded-full bg-neutral-200 dark:bg-neutral-800 text-brown" />
                   </label>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                       value={newUser.name}
                       onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                       placeholder="John Doe"
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function SettingsPage() {
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                       placeholder="john@university.edu"
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
                 </div>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                     <select
                       value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white transition-all appearance-none"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all appearance-none"
                     >
                       <option value="user">User</option>
                       <option value="admin">Administrator</option>
@@ -397,12 +397,12 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-orange-50 dark:bg-orange-900/20 p-4 border border-orange-100 dark:border-orange-900/30">
+                <div className="rounded-xl bg-brown/5 dark:bg-brown/10 p-4 border border-brown/10 dark:border-brown/20">
                   <div className="flex items-start gap-3">
-                    <Lock className="h-5 w-5 text-orange-600 mt-0.5" />
+                    <Lock className="h-5 w-5 text-brown mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-orange-800 dark:text-orange-300">Temporary Password</p>
-                      <p className="text-xs text-orange-600 dark:text-orange-400">The new user will use <code className="font-mono font-bold">password123</code> to log in for the first time.</p>
+                      <p className="text-sm font-bold text-brown dark:text-brown/80">Temporary Password</p>
+                      <p className="text-xs text-brown/60 dark:text-brown/40">The new user will use <code className="font-mono font-bold">password123</code> to log in for the first time.</p>
                     </div>
                   </div>
                 </div>
