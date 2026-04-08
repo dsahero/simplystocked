@@ -2,23 +2,229 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile information",
+      "description": "Application user",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "description": "Firebase Auth UID" },
-        "name": { "type": "string", "description": "Display name" },
-        "email": { "type": "string", "format": "email", "description": "User email" },
-        "role": { "type": "string", "enum": ["admin", "user", "guest"], "description": "User role" },
-        "avatarUrl": { "type": "string", "description": "Profile picture URL" },
-        "studentPid": { "type": "string", "description": "Optional student PID" }
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "avatarUrl": { "type": "string" }
       },
-      "required": ["id", "name", "email", "role"]
+      "required": ["id", "email", "role"]
+    },
+    "FoodProduct": {
+      "title": "Food Product",
+      "description": "A food item in the inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productName": { "type": "string" },
+        "productPrice": { "type": "number" },
+        "categoryId": { "type": "string" },
+        "brandId": { "type": "string" },
+        "nutritionId": { "type": "string" },
+        "stockLevelId": { "type": "string" }
+      },
+      "required": ["id", "productName", "productPrice"]
+    },
+    "StockLevel": {
+      "title": "Stock Level",
+      "description": "Inventory levels for a product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "quantity": { "type": "number" },
+        "stockSnapshot": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "groceryStoreQuantity": { "type": "number" },
+        "openMarketQuantity": { "type": "number" }
+      },
+      "required": ["id", "quantity"]
+    },
+    "Nutrition": {
+      "title": "Nutrition",
+      "description": "Nutritional information for a product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "fiber": { "type": "number" }
+      },
+      "required": ["id"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "categoryName"]
+    },
+    "Brand": {
+      "title": "Brand",
+      "description": "Product brand",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brandName": { "type": "string" }
+      },
+      "required": ["id", "brandName"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Inventory transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date"]
+    },
+    "TransactionItem": {
+      "title": "Transaction Item",
+      "description": "Item within a transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "foodProductId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "productPrice": { "type": "number" }
+      },
+      "required": ["id", "transactionId", "foodProductId", "quantity", "productPrice"]
+    },
+    "CheckPoint": {
+      "title": "Check Point",
+      "description": "Inventory check point",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "startDate"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Supplier invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "totalPrice": { "type": "number" },
+        "vendorId": { "type": "string" }
+      },
+      "required": ["id", "date", "totalPrice"]
+    },
+    "InvoiceItem": {
+      "title": "Invoice Item",
+      "description": "Item within an invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceId": { "type": "string" },
+        "foodProductId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unitPrice": { "type": "number" }
+      },
+      "required": ["id", "invoiceId", "foodProductId", "quantity", "unitPrice"]
+    },
+    "InvoiceAddressDetails": {
+      "title": "Invoice Address Details",
+      "description": "Address details for an invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zip": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "attn": { "type": "string" }
+      },
+      "required": ["id", "address", "city", "state", "zip"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Product vendor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "vendorName": { "type": "string" }
+      },
+      "required": ["id", "vendorName"]
     }
   },
   "firestore": {
-    "users/{userId}": {
+    "/users/{userId}": {
       "schema": "User",
-      "description": "User profile documents"
+      "description": "User profiles"
+    },
+    "/products/{productId}": {
+      "schema": "FoodProduct",
+      "description": "Inventory products"
+    },
+    "/stockLevels/{stockLevelId}": {
+      "schema": "StockLevel",
+      "description": "Stock levels"
+    },
+    "/nutrition/{nutritionId}": {
+      "schema": "Nutrition",
+      "description": "Nutritional data"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Product categories"
+    },
+    "/brands/{brandId}": {
+      "schema": "Brand",
+      "description": "Product brands"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Inventory transactions"
+    },
+    "/transactionItems/{itemId}": {
+      "schema": "TransactionItem",
+      "description": "Transaction items"
+    },
+    "/checkpoints/{checkpointId}": {
+      "schema": "CheckPoint",
+      "description": "Inventory checkpoints"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Invoices"
+    },
+    "/invoiceItems/{itemId}": {
+      "schema": "InvoiceItem",
+      "description": "Invoice items"
+    },
+    "/invoiceAddresses/{addressId}": {
+      "schema": "InvoiceAddressDetails",
+      "description": "Invoice addresses"
+    },
+    "/vendors/{vendorId}": {
+      "schema": "Vendor",
+      "description": "Vendors"
+    },
+    "/locations/{locationId}": {
+      "schema": "object",
+      "description": "Storage locations"
+    },
+    "/checkouts/{checkoutId}": {
+      "schema": "object",
+      "description": "Checkout records"
+    },
+    "/buyList/{itemId}": {
+      "schema": "object",
+      "description": "Items to buy"
     }
   }
 }

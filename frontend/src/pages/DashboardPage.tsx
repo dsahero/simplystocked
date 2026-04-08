@@ -48,6 +48,30 @@ export default function DashboardPage() {
         </p>
       </header>
 
+      {/* Banner Section */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative h-64 w-full overflow-hidden rounded-[48px] shadow-2xl shadow-forest/10"
+      >
+        <img
+          src="/icons/banner.jpg"
+          alt="Banner"
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/inventory/1200/400';
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-forest/80 to-transparent flex flex-col justify-center px-12">
+          <h2 className="text-4xl font-display font-bold text-white max-w-md leading-tight">
+            Streamline Your Food Bank Inventory
+          </h2>
+          <p className="mt-4 text-white/80 font-medium max-w-sm">
+            Real-time tracking, predictive analytics, and seamless distribution management.
+          </p>
+        </div>
+      </motion.div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (

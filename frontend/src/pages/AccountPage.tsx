@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { User, Mail, Lock, Camera, Save, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, Camera, Save, Shield, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 
 export default function AccountPage() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -11,6 +13,7 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpdateProfile = (e: React.FormEvent) => {
@@ -50,15 +53,24 @@ export default function AccountPage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateProfile({ avatarUrl: reader.result as string });
+    if (file && user) {
+      setIsUploading(true);
+      setStatus(null);
+      try {
+        const storageRef = ref(storage, `avatars/${user.id}/${file.name}`);
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        
+        await updateProfile({ avatarUrl: downloadURL });
         setStatus({ type: 'success', message: 'Profile picture updated!' });
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Upload error:', error);
+        setStatus({ type: 'error', message: 'Failed to upload image. Please try again.' });
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -90,14 +102,28 @@ export default function AccountPage() {
         <div className="md:col-span-1">
           <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm text-center">
             <div className="relative inline-block">
-              <img
-                src={user?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
-                alt="Profile"
-                className="h-32 w-32 rounded-full border-4 border-neutral-100 dark:border-neutral-800 object-cover"
-              />
+              <div className="relative">
+                <img
+                  src={user?.avatarUrl || '/icons/default-pfp.jpg'}
+                  alt="Profile"
+                  className={cn(
+                    "h-32 w-32 rounded-full border-4 border-neutral-100 dark:border-neutral-800 object-cover transition-opacity",
+                    isUploading && "opacity-50"
+                  )}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+                  }}
+                />
+                {isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-brown" />
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-brown text-white shadow-lg hover:bg-brown-dark transition-all"
+                disabled={isUploading}
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-brown text-white shadow-lg hover:bg-brown-dark transition-all disabled:opacity-50"
               >
                 <Camera className="h-4 w-4" />
               </button>

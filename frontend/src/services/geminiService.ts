@@ -78,3 +78,28 @@ export async function getAIChatResponse(message: string, context: string): Promi
   });
   return response.text || "I'm sorry, I couldn't process that request.";
 }
+
+export async function getInventoryInsights(inventory: any[], checkouts: any[]): Promise<string> {
+  const model = "gemini-3-flash-preview";
+  const prompt = `
+    Analyze the following food bank inventory and checkout history.
+    Inventory: ${JSON.stringify(inventory.map(i => ({ name: i.name, stock: i.totalQuantity, min: i.minStockLevel, category: i.category })))}
+    Recent Checkouts: ${JSON.stringify(checkouts.slice(0, 20).map(c => ({ name: c.itemName, qty: c.quantity, date: c.timestamp })))}
+    
+    Provide 3-4 concise, actionable insights for the food bank manager. 
+    Focus on:
+    1. Items at risk of running out soon based on usage.
+    2. Categories that are overstocked.
+    3. Trends in distribution.
+    4. Suggestions for the next buy list.
+    
+    Format as a short bulleted list.
+  `;
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: prompt,
+  });
+
+  return response.text || "No specific insights available at this time.";
+}

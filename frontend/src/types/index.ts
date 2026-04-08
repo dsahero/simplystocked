@@ -54,6 +54,7 @@ export interface CheckoutRecord {
   itemId: string;
   itemName: string;
   quantity: number;
+  costAtTime: number;
   locationId: string;
   timestamp: string;
   userId: string;
