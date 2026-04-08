@@ -56,14 +56,9 @@ The frontend will be available at `http://localhost:5173`
    ```
    DB_PASSWORD=your_mysql_password
    ```
-5. Make sure your MySQL server is running and the `simplystocked` schema exists. Run the seed files in order using MySQL Workbench:
-   ```
-   sql_files/00_reset.sql
-   sql_files/01_categories.sql
-   ...
-   sql_files/10_transactions.sql
-   ```
-6. Start the API server:
+5. Make sure your MySQL server is running and the `simplystocked` schema exists. Run the database dump using MySQL Workbench
+   
+7. Start the API server:
    ```bash
    uvicorn main:app --reload
    ```
