@@ -3,8 +3,6 @@ import { User, Mail, Lock, Camera, Save, Shield, AlertCircle, CheckCircle2, Load
 import { motion } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
 
 export default function AccountPage() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -43,13 +41,13 @@ export default function AccountPage() {
     }
 
     try {
-      await changePassword(newPassword);
+      await changePassword(currentPassword, newPassword);
       setStatus({ type: 'success', message: 'Password changed successfully!' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setStatus({ type: 'error', message: 'Failed to change password. Please try again.' });
+      setStatus({ type: 'error', message: err instanceof Error ? err.message : 'Failed to change password.' });
     }
   };
 
@@ -59,16 +57,18 @@ export default function AccountPage() {
       setIsUploading(true);
       setStatus(null);
       try {
-        const storageRef = ref(storage, `avatars/${user.id}/${file.name}`);
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        
-        await updateProfile({ avatarUrl: downloadURL });
-        setStatus({ type: 'success', message: 'Profile picture updated!' });
+        // Store avatar as data URL in localStorage (no cloud storage)
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const dataUrl = ev.target?.result as string;
+          await updateProfile({ avatarUrl: dataUrl });
+          setStatus({ type: 'success', message: 'Profile picture updated!' });
+          setIsUploading(false);
+        };
+        reader.readAsDataURL(file);
       } catch (error) {
         console.error('Upload error:', error);
-        setStatus({ type: 'error', message: 'Failed to upload image. Please try again.' });
-      } finally {
+        setStatus({ type: 'error', message: 'Failed to update avatar.' });
         setIsUploading(false);
       }
     }

@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { BarChart2, DollarSign, TrendingUp, ShoppingCart, Plus, Trash2, ArrowRight, AlertCircle, MapPin, CheckCircle2, Sparkles, Download, RefreshCw } from 'lucide-react';
+import { BarChart2, DollarSign, TrendingUp, ShoppingCart, Plus, Trash2, ArrowRight, AlertCircle, MapPin, CheckCircle2, Sparkles, Download, RefreshCw, CheckCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useInventory } from '../contexts/InventoryContext';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import Markdown from 'react-markdown';
+import { InvoiceData } from '../types';
 
 type TabType = 'analytics' | 'cost' | 'prediction' | 'trends' | 'buylist';
 
@@ -17,8 +18,10 @@ export default function AnalyticsPage() {
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [selectedBuyItems, setSelectedBuyItems] = useState<Set<string>>(new Set());
+  const [buyReviewData, setBuyReviewData] = useState<InvoiceData | null>(null);
   
-  const { items, locations, analytics, checkouts, buyList, addToBuyList, removeFromBuyList, clearBuyList, getAIInsights, seedTestData } = useInventory();
+  const { items, locations, analytics, checkouts, buyList, addToBuyList, removeFromBuyList, clearBuyList, processPurchasedItems, getAIInsights, seedTestData } = useInventory();
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -90,6 +93,44 @@ export default function AnalyticsPage() {
       unit: item.unit,
       isSuggested: true
     });
+  };
+
+  const handleToggleSelectItem = (id: string) => {
+    const newSelected = new Set(selectedBuyItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedBuyItems(newSelected);
+  };
+
+  const handleOpenReview = () => {
+    const selectedItems = buyList.filter(item => selectedBuyItems.has(item.id));
+    if (selectedItems.length === 0) return;
+
+    setBuyReviewData({
+      items: selectedItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        cost: 0, // Default cost
+        isPerishable: false,
+      })),
+      totalCost: 0,
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleCommitPurchase = async () => {
+    if (!buyReviewData) return;
+    
+    try {
+      await processPurchasedItems(buyReviewData.items, Array.from(selectedBuyItems));
+      setBuyReviewData(null);
+      setSelectedBuyItems(new Set());
+    } catch (err) {
+      console.error('Failed to process purchase:', err);
+    }
   };
 
   return (
@@ -512,6 +553,15 @@ export default function AnalyticsPage() {
                 <p className="text-sm text-forest/60 dark:text-neutral-400">Items needed for restock.</p>
               </div>
               <div className="flex items-center gap-3">
+                {selectedBuyItems.size > 0 && (
+                  <button 
+                    onClick={handleOpenReview}
+                    className="flex items-center gap-2 rounded-2xl bg-brown px-6 py-3 text-sm font-bold text-white hover:bg-brown-dark transition-all active:scale-95 shadow-xl shadow-brown/10"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Checkout Selected ({selectedBuyItems.size})
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsAddingToBuyList(true)}
                   className="flex items-center gap-2 rounded-2xl bg-forest dark:bg-white px-6 py-3 text-sm font-bold text-white dark:text-neutral-900 hover:bg-forest-dark dark:hover:bg-neutral-100 transition-all active:scale-95 shadow-xl shadow-forest/10"
@@ -631,9 +681,22 @@ export default function AnalyticsPage() {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
-                          className="flex items-center justify-between p-6 rounded-[32px] border border-forest/5 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm hover:border-brown/20 dark:hover:border-brown/30 transition-all group"
+                          className={cn(
+                            "flex items-center justify-between p-6 rounded-[32px] border bg-white dark:bg-neutral-900 shadow-sm transition-all group",
+                            selectedBuyItems.has(item.id) 
+                              ? "border-brown ring-2 ring-brown/10" 
+                              : "border-forest/5 dark:border-neutral-800 hover:border-brown/20 dark:hover:border-brown/30"
+                          )}
                         >
                           <div className="flex items-center gap-6">
+                            <div className="flex items-center justify-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedBuyItems.has(item.id)}
+                                onChange={() => handleToggleSelectItem(item.id)}
+                                className="h-6 w-6 rounded-lg border-forest/10 text-brown focus:ring-brown cursor-pointer"
+                              />
+                            </div>
                             <div className={cn(
                               "flex h-14 w-14 items-center justify-center rounded-[20px] transition-all duration-500",
                               item.isSuggested 
@@ -717,6 +780,189 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {/* Buy Review Modal */}
+      <AnimatePresence>
+        {buyReviewData && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-forest/40 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-forest dark:text-white">Review Purchase</h2>
+                  <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium">Confirm items before adding to inventory.</p>
+                </div>
+                <button onClick={() => setBuyReviewData(null)} className="rounded-2xl p-3 hover:bg-forest/5 dark:hover:bg-neutral-800 transition-all active:scale-90">
+                  <X className="h-6 w-6 text-forest/40" />
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="rounded-[24px] border border-forest/5 bg-cream/30 dark:bg-neutral-800 p-6">
+                    <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mb-1">Purchase Date</p>
+                    <input
+                      type="date"
+                      value={buyReviewData.date}
+                      onChange={(e) => setBuyReviewData({ ...buyReviewData, date: e.target.value })}
+                      className="text-xl font-display font-bold text-forest dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full"
+                    />
+                  </div>
+                  <div className="rounded-[24px] border border-forest/5 bg-cream/30 dark:bg-neutral-800 p-6">
+                    <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mb-1">Total Cost</p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xl font-display font-bold text-forest dark:text-white">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={buyReviewData.totalCost}
+                        onChange={(e) => setBuyReviewData({ ...buyReviewData, totalCost: parseFloat(e.target.value) || 0 })}
+                        className="text-xl font-display font-bold text-forest dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-forest dark:text-white">Items to Add</h3>
+                    <button 
+                      onClick={() => {
+                        const newItems = [...buyReviewData.items, { name: '', quantity: 1, cost: 0, isPerishable: false }];
+                        setBuyReviewData({ ...buyReviewData, items: newItems });
+                      }}
+                      className="flex items-center gap-2 text-xs font-bold text-brown hover:text-brown-dark transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Manual Item
+                    </button>
+                  </div>
+                  
+                  {buyReviewData.items.map((item, idx) => (
+                    <div key={idx} className="rounded-[32px] border border-forest/5 bg-white dark:bg-neutral-800 p-6 space-y-6 shadow-sm relative group/item">
+                      <button 
+                        onClick={() => {
+                          const newItems = buyReviewData.items.filter((_, i) => i !== idx);
+                          setBuyReviewData({ ...buyReviewData, items: newItems });
+                        }}
+                        className="absolute top-4 right-4 p-2 text-forest/20 hover:text-brown opacity-0 group-hover/item:opacity-100 transition-all"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Item Name</label>
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => {
+                              const newItems = [...buyReviewData.items];
+                              newItems[idx].name = e.target.value;
+                              setBuyReviewData({ ...buyReviewData, items: newItems });
+                            }}
+                            className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Qty</label>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...buyReviewData.items];
+                                newItems[idx].quantity = parseFloat(e.target.value) || 0;
+                                setBuyReviewData({ ...buyReviewData, items: newItems });
+                              }}
+                              className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Cost</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.cost}
+                              onChange={(e) => {
+                                const newItems = [...buyReviewData.items];
+                                newItems[idx].cost = parseFloat(e.target.value) || 0;
+                                setBuyReviewData({ ...buyReviewData, items: newItems });
+                              }}
+                              className="w-full rounded-2xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-4 py-3 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-3 text-sm font-bold text-forest/60 dark:text-neutral-300 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={item.isPerishable} 
+                              onChange={(e) => {
+                                const newItems = [...buyReviewData.items];
+                                newItems[idx].isPerishable = e.target.checked;
+                                setBuyReviewData({ ...buyReviewData, items: newItems });
+                              }}
+                              className="h-5 w-5 rounded-lg border-forest/10 text-brown focus:ring-brown" 
+                            />
+                            Perishable
+                          </label>
+                          {item.isPerishable && (
+                            <input
+                              type="date"
+                              value={item.expirationDate}
+                              onChange={(e) => {
+                                const newItems = [...buyReviewData.items];
+                                newItems[idx].expirationDate = e.target.value;
+                                setBuyReviewData({ ...buyReviewData, items: newItems });
+                              }}
+                              className="rounded-xl border border-forest/10 bg-cream/20 px-4 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5"
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <MapPin className="h-5 w-5 text-forest/20" />
+                          <select className="rounded-xl border border-forest/10 bg-cream/20 px-4 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5">
+                            {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 mt-10">
+                <button
+                  onClick={() => setBuyReviewData(null)}
+                  className="rounded-2xl px-8 py-4 text-sm font-bold text-forest/40 hover:bg-forest/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCommitPurchase}
+                  className="flex items-center gap-3 rounded-2xl bg-brown px-10 py-4 text-sm font-bold text-white shadow-xl shadow-brown/20 hover:bg-brown-dark transition-all active:scale-95"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  Confirm & Update Inventory
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

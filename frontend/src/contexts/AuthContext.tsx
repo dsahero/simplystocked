@@ -1,186 +1,103 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, query, where, collection, getDocs } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import { loginUser, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
 import { User, UserRole } from '../types';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { DefaultAvatar } from '../components/ui/Brand';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  changePassword: (newPassword: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
   isAuthReady: boolean;
+  // User management (admin)
+  getAllUsers: () => Promise<ApiUser[]>;
+  createUser: (username: string, password: string, role: string) => Promise<ApiUser>;
+  updateUserRole: (userId: number, role: string) => Promise<ApiUser>;
+  deleteUser: (userId: number) => Promise<{ message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+const SESSION_KEY = 'simplystocked_session';
+
+function apiUserToUser(u: ApiUser): User {
+  return {
+    id: String(u.UserId),
+    name: u.Username,
+    email: u.Username, // username is the email
+    role: (u.Role === 'manager' ? 'user' : u.Role) as UserRole,
+    avatarUrl: '',
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
-  const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
-    const errInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      authInfo: {
-        userId: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-        emailVerified: auth.currentUser?.emailVerified,
-        isAnonymous: auth.currentUser?.isAnonymous,
-      },
-      operationType,
-      path
-    };
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
-  };
-
+  // Restore session from localStorage on mount
   useEffect(() => {
-    // Check for mock session first
-    const mockUser = localStorage.getItem('simplystocked_mock_user');
-    if (mockUser) {
-      setUser(JSON.parse(mockUser));
-      setIsAuthReady(true);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          // 1. Try to fetch user data from Firestore by UID
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          
-          if (userDoc.exists()) {
-            setUser(userDoc.data() as User);
-          } else {
-            // 2. If not found by UID, try to find by email
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('email', '==', firebaseUser.email));
-            const querySnapshot = await getDocs(q);
-            
-            if (!querySnapshot.empty) {
-              // Found an existing user with this email
-              const existingUserData = querySnapshot.docs[0].data() as User;
-              
-              // Update the user data with the new Firebase UID
-              const updatedUser: User = {
-                ...existingUserData,
-                id: firebaseUser.uid,
-                avatarUrl: firebaseUser.photoURL || existingUserData.avatarUrl,
-                name: firebaseUser.displayName || existingUserData.name,
-              };
-              
-              await setDoc(doc(db, 'users', firebaseUser.uid), updatedUser);
-              setUser(updatedUser);
-            } else {
-              // 3. ACCESS DENIED: User is not in the system
-              // We sign them out immediately
-              await signOut(auth);
-              setUser(null);
-            }
-          }
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, 'users');
-        setUser(null);
+    try {
+      const stored = localStorage.getItem(SESSION_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
       }
-      setIsAuthReady(true);
-    });
-
-    return () => unsubscribe();
+    } catch {
+      localStorage.removeItem(SESSION_KEY);
+    }
+    setIsAuthReady(true);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    try {
-      // Special override for the admin account as requested by the user
-      // This bypasses Firebase Auth if the provider isn't enabled in the console
-      if (email === 'admin@simplystocked.com' && password === 'password') {
-        const defaultAvatarSvg = renderToStaticMarkup(<DefaultAvatar />);
-        const defaultAvatarDataUrl = `data:image/svg+xml;base64,${btoa(defaultAvatarSvg)}`;
-        
-        const adminUser: User = {
-          id: 'admin-mock-id',
-          name: 'System Admin',
-          email: 'admin@simplystocked.com',
-          role: 'admin',
-          avatarUrl: defaultAvatarDataUrl,
-        };
-        
-        setUser(adminUser);
-        localStorage.setItem('simplystocked_mock_user', JSON.stringify(adminUser));
-        return;
-      }
-
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+  const login = async (username: string, password: string) => {
+    const apiUser = await loginUser(username, password);
+    const appUser = apiUserToUser(apiUser);
+    setUser(appUser);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(appUser));
   };
 
+  // Google login is not supported with the MySQL backend
   const loginWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-
-      // Perform a quick check to see if the user is in the system
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      if (!userDoc.exists()) {
-        const q = query(collection(db, 'users'), where('email', '==', firebaseUser.email));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          await signOut(auth);
-          throw new Error('Your email is not registered in the system. Please contact an administrator.');
-        }
-      }
-    } catch (error) {
-      console.error('Google sign-in error:', error);
-      if (error instanceof Error && !error.message.includes('not registered')) {
-        handleFirestoreError(error, OperationType.GET, 'users (google login check)');
-      }
-      throw error;
-    }
+    throw new Error('Google sign-in is not available. Please use your username and password.');
   };
 
   const logout = async () => {
-    localStorage.removeItem('simplystocked_mock_user');
-    await signOut(auth);
+    setUser(null);
+    localStorage.removeItem(SESSION_KEY);
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    try {
-      const updatedUser = { ...user, ...updates };
-      await setDoc(doc(db, 'users', user.id), updatedUser, { merge: true });
-      setUser(updatedUser);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
-      throw error;
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));
+    // If role changed, sync to backend
+    if (updates.role && user.id) {
+      const backendRole = updates.role === 'user' ? 'manager' : updates.role;
+      await updateUserRole(Number(user.id), backendRole);
     }
   };
 
-  const changePassword = async (newPassword: string) => {
-    // Firebase Auth handles password change differently
-    console.log('Password change requested:', newPassword);
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!user) throw new Error('Not authenticated');
+    await apiUpdatePassword(Number(user.id), currentPassword, newPassword);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout, updateProfile, changePassword, isAuthenticated: !!user, isAuthReady }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      loginWithGoogle,
+      logout,
+      updateProfile,
+      changePassword,
+      isAuthenticated: !!user,
+      isAuthReady,
+      getAllUsers,
+      createUser,
+      updateUserRole,
+      deleteUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );
