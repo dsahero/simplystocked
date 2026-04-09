@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python -c \"from main import app; print\\(f'Routes: {len\\(app.routes\\)}'\\); [print\\(f'  {r.path}'\\) for r in app.routes if hasattr\\(r, 'methods'\\)]\")"
+    ]
+  }
+}
