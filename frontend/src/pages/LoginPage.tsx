@@ -65,7 +65,7 @@ export default function LoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="block w-full rounded-2xl border border-forest/10 dark:border-neutral-800 bg-cream/30 dark:bg-neutral-950 py-4 pl-12 pr-4 text-sm font-bold placeholder-forest/20 focus:border-brown focus:bg-white dark:focus:bg-neutral-900 focus:outline-none focus:ring-4 focus:ring-brown/5 transition-all dark:text-white"
-                    placeholder="admin@simplystocked.com"
+                    placeholder="Enter your username"
                   />
                 </div>
               </div>

@@ -7,7 +7,6 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import InventoryPage from './pages/InventoryPage';
-import AnalyticsPage from './pages/AnalyticsPage';
 import UploadInvoicesPage from './pages/UploadInvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import AccountPage from './pages/AccountPage';
@@ -53,11 +52,7 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              } />
+              
               
               <Route path="/upload" element={
                 <ProtectedRoute>
