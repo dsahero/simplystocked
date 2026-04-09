@@ -6,7 +6,7 @@
 INSERT INTO Users (Username, password_hash, Role)
 VALUES (
     'admin@simplystocked.com',
-    '$2b$12$WOA6uR0uKQ7hMD5xeEogyuoP5Pq0q8Bo4dwd8u81S5Iu/DARomWPm',
+    '$2b$12$IbmIk5SqirOuNLRdzU6yk.Lt2YjwTihcRe1e0k58Dzmogs4ZD9niG',
     'admin'
 )
 ON DUPLICATE KEY UPDATE UserId = UserId;
