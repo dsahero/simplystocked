@@ -25,10 +25,11 @@ def get_all_users(db: Session):
     return result.mappings().all()
 
 
-def create_user(db: Session, username: str, password_hash: str, role: str) -> int:
+def create_user(db: Session, username: str, password_hash: str, email: str, role: str) -> int:
     result = db.execute(
-        text("INSERT INTO Users (Username, password_hash, Role) VALUES (:username, :password_hash, :role)"),
-        {"username": username, "password_hash": password_hash, "role": role}
+        text("INSERT INTO Users (Username, password_hash, Email, Role) "
+             "VALUES (:username, :password_hash, :email, :role)"),
+        {"username": username, "password_hash": password_hash, "email": email, "role": role}
     )
     db.commit()
     return result.lastrowid

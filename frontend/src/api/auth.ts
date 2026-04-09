@@ -24,10 +24,10 @@ export function getAllUsers() {
   return apiFetch<ApiUser[]>('/auth/users');
 }
 
-export function createUser(username: string, password: string, role: string) {
+export function createUser(username: string, password: string, email: string, role: string) {
   return apiFetch<ApiUser>('/auth/users', {
     method: 'POST',
-    body: JSON.stringify({ username, password, role }),
+    body: JSON.stringify({ username, password, email, role }),
   });
 }
 

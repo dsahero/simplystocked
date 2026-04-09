@@ -49,14 +49,15 @@ def get_all_users(db: Session) -> list:
     return [dict(u) for u in auth_queries.get_all_users(db)]
 
 
-def create_user(db: Session, username: str, password: str, role: str) -> dict:
-    existing = auth_queries.get_user_by_username(db, username)
-    if existing:
+def create_user(db: Session, username: str, password: str, email: str, role: str) -> dict:
+    if auth_queries.get_user_by_username(db, username):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    if auth_queries.get_user_by_email(db, email):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
     if role not in ("admin", "manager", "user"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
     password_hash = pwd_context.hash(password)
-    user_id = auth_queries.create_user(db, username, password_hash, role)
+    user_id = auth_queries.create_user(db, username, password_hash, email, role)
     return {"UserId": user_id, "Username": username, "Role": role}
 
 

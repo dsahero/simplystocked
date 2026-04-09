@@ -13,7 +13,7 @@ interface AuthContextType {
   isAuthReady: boolean;
   // User management (admin)
   getAllUsers: () => Promise<ApiUser[]>;
-  createUser: (username: string, password: string, role: string) => Promise<ApiUser>;
+  createUser: (username: string, password: string, email: string, role: string) => Promise<ApiUser>;
   updateUserRole: (userId: number, role: string) => Promise<ApiUser>;
   deleteUser: (userId: number) => Promise<{ message: string }>;
 }

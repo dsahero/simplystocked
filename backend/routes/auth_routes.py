@@ -15,6 +15,7 @@ class LoginRequest(BaseModel):
 class CreateUserRequest(BaseModel):
     username: str
     password: str
+    email: str
     role: str  # admin | manager | user
 
 
@@ -48,7 +49,7 @@ def get_all_users(db: Session = Depends(get_db)):
 
 @router.post("/users")
 def create_user(body: CreateUserRequest, db: Session = Depends(get_db)):
-    return auth_controller.create_user(db, body.username, body.password, body.role)
+    return auth_controller.create_user(db, body.username, body.password, body.email, body.role)
 
 
 @router.put("/users/{user_id}/role")

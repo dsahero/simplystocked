@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>('users');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' as UserRole });
+  const [newUser, setNewUser] = useState({ username: '', email: '', role: 'user' as UserRole });
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,10 +51,10 @@ export default function SettingsPage() {
     e.preventDefault();
     try {
       const backendRole = newUser.role === 'user' ? 'manager' : newUser.role;
-      const created = await apiCreateUser(newUser.email, 'password123', backendRole);
+      const created = await apiCreateUser(newUser.username, 'password123', newUser.email, backendRole);
       setUsers([...users, created]);
       setIsAddUserModalOpen(false);
-      setNewUser({ name: '', email: '', role: 'user' });
+      setNewUser({ username: '', email: '', role: 'user' });
       alert(`User created! Temporary password: password123`);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to create user.');
@@ -335,16 +335,33 @@ export default function SettingsPage() {
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Username (used to log in)
+                    Username (used to log in with password)
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                     <input
                       type="text"
                       required
+                      value={newUser.username}
+                      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                      placeholder="jane_doe"
+                      className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Email (used for Google sign-in)
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <input
+                      type="email"
+                      required
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      placeholder="user@example.com"
+                      placeholder="jane@gmail.com"
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
