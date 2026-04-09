@@ -11,6 +11,7 @@ import UploadInvoicesPage from './pages/UploadInvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import AccountPage from './pages/AccountPage';
 import VendorsPage from './pages/VendorsPage';
+import CheckpointsPage from './pages/CheckpointsPage';
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -64,6 +65,12 @@ export default function App() {
               <Route path="/vendors" element={
                 <ProtectedRoute>
                   <VendorsPage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/checkpoints" element={
+                <ProtectedRoute>
+                  <CheckpointsPage />
                 </ProtectedRoute>
               } />
 

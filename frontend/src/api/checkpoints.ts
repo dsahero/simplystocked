@@ -55,12 +55,37 @@ export function createTransaction(
   });
 }
 
+export interface ApiYearEndProduct {
+  FoodProductId: number;
+  ProductName: string;
+  CategoryName: string;
+  total_distributed: number;
+  current_stock: number;
+  OpenMarketQuantity: number;
+  GroceryStoreQuantity: number;
+}
+
+export interface ApiYearEndSummary {
+  checkpoint: ApiCheckpoint;
+  total_distributed: number;
+  remaining_stock: number;
+  products: ApiYearEndProduct[];
+}
+
+export interface ApiRolloverResult {
+  closed_checkpoint_id: number;
+  new_checkpoint_id: number;
+  new_start_date: string;
+  new_end_date: string;
+  message: string;
+}
+
 export function getYearEndSummary(checkpointId: number) {
-  return apiFetch<object>(`/checkpoints/${checkpointId}/summary`);
+  return apiFetch<ApiYearEndSummary>(`/checkpoints/${checkpointId}/summary`);
 }
 
 export function rollover(checkpointId: number, new_start_date: string, new_end_date: string) {
-  return apiFetch<object>(`/checkpoints/${checkpointId}/rollover`, {
+  return apiFetch<ApiRolloverResult>(`/checkpoints/${checkpointId}/rollover`, {
     method: 'POST',
     body: JSON.stringify({ new_start_date, new_end_date }),
   });
