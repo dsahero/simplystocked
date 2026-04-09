@@ -2,6 +2,7 @@ import { apiFetch } from './client';
 
 export interface ApiVendor {
   VendorId: number;
+  VendorName: string;
   Email: string;
   Phone: string;
   HQAddress: string;
@@ -22,6 +23,7 @@ export function createVendor(v: Omit<ApiVendor, 'VendorId'>) {
   return apiFetch<ApiVendor>('/vendors/', {
     method: 'POST',
     body: JSON.stringify({
+      vendor_name: v.VendorName,
       email: v.Email,
       phone: v.Phone,
       hq_address: v.HQAddress,
@@ -36,6 +38,7 @@ export function updateVendor(id: number, v: Omit<ApiVendor, 'VendorId'>) {
   return apiFetch<ApiVendor>(`/vendors/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
+      vendor_name: v.VendorName,
       email: v.Email,
       phone: v.Phone,
       hq_address: v.HQAddress,

@@ -735,7 +735,7 @@ export default function UploadInvoicesPage() {
                   <option value="">Select vendor…</option>
                   {vendors.map((v) => (
                     <option key={v.VendorId} value={v.VendorId}>
-                      {v.HQCity}, {v.HQState} — {v.Email || `Vendor #${v.VendorId}`}
+                      {v.VendorName || `${v.HQCity}, ${v.HQState}`} — {v.Email || `Vendor #${v.VendorId}`}
                     </option>
                   ))}
                 </select>

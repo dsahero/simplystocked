@@ -23,6 +23,7 @@ export interface ApiInvoice {
   Desc: string;
   TotalPrice: number;
   VendorId: number;
+  VendorName?: string;
   VendorEmail?: string;
   VendorCity?: string;
   items?: ApiInvoiceItem[];
