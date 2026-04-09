@@ -10,6 +10,7 @@ import InventoryPage from './pages/InventoryPage';
 import UploadInvoicesPage from './pages/UploadInvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import AccountPage from './pages/AccountPage';
+import VendorsPage from './pages/VendorsPage';
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,12 @@ export default function App() {
               <Route path="/upload" element={
                 <ProtectedRoute>
                   <UploadInvoicesPage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/vendors" element={
+                <ProtectedRoute>
+                  <VendorsPage />
                 </ProtectedRoute>
               } />
 

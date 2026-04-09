@@ -5,7 +5,7 @@ from sqlalchemy import text
 def get_all_invoices(db: Session):
     result = db.execute(text("""
         SELECT i.InvoiceId, i.Date, i.Desc, i.TotalPrice,
-               v.VendorId, v.Email AS VendorEmail, v.HQCity AS VendorCity
+               v.VendorId, v.VendorName, v.Email AS VendorEmail, v.HQCity AS VendorCity
         FROM Invoice i
         JOIN Vendor v ON i.VendorId = v.VendorId
         ORDER BY i.Date DESC
@@ -16,7 +16,7 @@ def get_all_invoices(db: Session):
 def get_invoice_by_id(db: Session, invoice_id: int):
     invoice = db.execute(text("""
         SELECT i.InvoiceId, i.Date, i.Desc, i.TotalPrice, i.VendorId,
-               v.Email AS VendorEmail, v.Phone AS VendorPhone,
+               v.VendorName, v.Email AS VendorEmail, v.Phone AS VendorPhone,
                v.HQAddress, v.HQCity, v.HQState, v.HQZip,
                frm.Attn AS FromAttn, frm.Address AS FromAddress,
                frm.City AS FromCity, frm.State AS FromState,
