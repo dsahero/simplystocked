@@ -13,6 +13,13 @@ export function loginUser(username: string, password: string) {
   });
 }
 
+export function loginWithGoogleApi(credential: string) {
+  return apiFetch<ApiUser>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+}
+
 export function getAllUsers() {
   return apiFetch<ApiUser[]>('/auth/users');
 }

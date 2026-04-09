@@ -27,9 +27,18 @@ class UpdatePasswordRequest(BaseModel):
     new_password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
+
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     return auth_controller.login(db, body.username, body.password)
+
+
+@router.post("/google")
+def google_login(body: GoogleLoginRequest, db: Session = Depends(get_db)):
+    return auth_controller.google_login(db, body.credential)
 
 
 @router.get("/users")

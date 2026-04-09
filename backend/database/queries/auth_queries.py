@@ -50,6 +50,30 @@ def update_password(db: Session, user_id: int, password_hash: str):
     db.commit()
 
 
+def get_user_by_google_sub(db: Session, google_sub: str):
+    result = db.execute(
+        text("SELECT UserId, Username, Role FROM Users WHERE google_sub = :sub"),
+        {"sub": google_sub},
+    )
+    return result.mappings().first()
+
+
+def get_user_by_email(db: Session, email: str):
+    result = db.execute(
+        text("SELECT UserId, Username, Role FROM Users WHERE Email = :email"),
+        {"email": email},
+    )
+    return result.mappings().first()
+
+
+def link_google_sub(db: Session, user_id: int, google_sub: str):
+    db.execute(
+        text("UPDATE Users SET google_sub = :sub WHERE UserId = :user_id"),
+        {"sub": google_sub, "user_id": user_id},
+    )
+    db.commit()
+
+
 def delete_user(db: Session, user_id: int):
     db.execute(
         text("DELETE FROM Users WHERE UserId = :user_id"),

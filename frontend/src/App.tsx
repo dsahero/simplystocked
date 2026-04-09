@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { InventoryProvider } from './contexts/InventoryContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -35,6 +36,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <InventoryProvider>
           <BrowserRouter>
@@ -83,6 +85,7 @@ export default function App() {
           </BrowserRouter>
         </InventoryProvider>
       </AuthProvider>
+      </GoogleOAuthProvider>
     </ThemeProvider>
   );
 }

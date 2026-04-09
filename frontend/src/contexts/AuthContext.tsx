@@ -1,11 +1,11 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
+import { loginUser, loginWithGoogleApi, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
 import { User, UserRole } from '../types';
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -56,9 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(appUser));
   };
 
-  // Google login is not supported with the MySQL backend
-  const loginWithGoogle = async () => {
-    throw new Error('Google sign-in is not available. Please use your username and password.');
+  const loginWithGoogle = async (credential: string) => {
+    const apiUser = await loginWithGoogleApi(credential);
+    const appUser = apiUserToUser(apiUser);
+    setUser(appUser);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(appUser));
   };
 
   const logout = async () => {

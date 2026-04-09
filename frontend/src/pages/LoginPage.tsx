@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { BrandLogo } from '../components/ui/Brand';
@@ -11,7 +12,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,6 +121,22 @@ export default function LoginPage() {
                 'Sign In'
               )}
             </button>
+
+            <div className="flex justify-center pt-2">
+              <GoogleLogin
+                onSuccess={async (cred) => {
+                  if (!cred.credential) return;
+                  setError('');
+                  try {
+                    await loginWithGoogle(cred.credential);
+                    navigate('/');
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Google sign-in failed');
+                  }
+                }}
+                onError={() => setError('Google sign-in failed')}
+              />
+            </div>
 
           </form>
         </div>
