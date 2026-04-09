@@ -4,7 +4,11 @@ from sqlalchemy import text
 
 def get_all_checkpoints(db: Session):
     result = db.execute(text("""
-        SELECT CheckPointId, Date, StartDate, EndDate
+        SELECT CheckPointId, Date, StartDate, EndDate,
+               TotalSpent, TotalDistributedValue, TotalWasteCost, NetValue,
+               ItemsReceived, ItemsDistributed, ItemsWasted,
+               TransactionCount, UniqueVisitors, InvoiceCount,
+               AvgTransactionValue, AvgItemsPerTransaction, LowStockAlerts, Notes
         FROM CheckPoint
         ORDER BY StartDate DESC
     """))
@@ -13,7 +17,11 @@ def get_all_checkpoints(db: Session):
 
 def get_checkpoint_by_id(db: Session, checkpoint_id: int):
     result = db.execute(text("""
-        SELECT CheckPointId, Date, StartDate, EndDate
+        SELECT CheckPointId, Date, StartDate, EndDate,
+               TotalSpent, TotalDistributedValue, TotalWasteCost, NetValue,
+               ItemsReceived, ItemsDistributed, ItemsWasted,
+               TransactionCount, UniqueVisitors, InvoiceCount,
+               AvgTransactionValue, AvgItemsPerTransaction, LowStockAlerts, Notes
         FROM CheckPoint
         WHERE CheckPointId = :checkpoint_id
     """), {"checkpoint_id": checkpoint_id})

@@ -11,6 +11,8 @@ from routes import (
     inventory_routes,
     invoice_routes,
     checkpoint_routes,
+    analytics_routes,
+    waste_routes,
 )
 
 Base.metadata.create_all(bind=engine)
@@ -35,6 +37,8 @@ app.include_router(product_routes.router)
 app.include_router(inventory_routes.router)
 app.include_router(invoice_routes.router)
 app.include_router(checkpoint_routes.router)
+app.include_router(analytics_routes.router)
+app.include_router(waste_routes.router)
 
 
 @app.on_event("startup")

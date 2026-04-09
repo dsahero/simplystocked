@@ -12,6 +12,7 @@ import SettingsPage from './pages/SettingsPage';
 import AccountPage from './pages/AccountPage';
 import VendorsPage from './pages/VendorsPage';
 import CheckpointsPage from './pages/CheckpointsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,12 @@ export default function App() {
 
               
               
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              } />
+
               <Route path="/upload" element={
                 <ProtectedRoute>
                   <UploadInvoicesPage />
