@@ -83,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
                   <span className="text-sm font-bold text-forest dark:text-white leading-none">{user?.name || 'User'}</span>
-                  <span className="text-[10px] font-bold text-forest/40 dark:text-neutral-500 mt-1 uppercase tracking-wider">Admin</span>
+                  <span className="text-[10px] font-bold text-forest/40 dark:text-neutral-500 mt-1 uppercase tracking-wider">{user?.role || 'User'}</span>
                 </div>
                 <ChevronDown className={cn("h-4 w-4 text-forest/20 transition-transform", isProfileOpen && "rotate-180")} />
               </button>

@@ -62,7 +62,7 @@ def create_user(db: Session, username: str, password: str, email: str, role: str
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
     password_hash = pwd_context.hash(password)
     user_id = auth_queries.create_user(db, username, password_hash, email, role)
-    return {"UserId": user_id, "Username": username, "Role": role}
+    return {"UserId": user_id, "Username": username, "Email": email, "Role": role}
 
 
 def update_user_role(db: Session, user_id: int, role: str) -> dict:
@@ -72,7 +72,7 @@ def update_user_role(db: Session, user_id: int, role: str) -> dict:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     auth_queries.update_user_role(db, user_id, role)
-    return {"UserId": user_id, "Username": user["Username"], "Role": role}
+    return {"UserId": user_id, "Username": user["Username"], "Email": user.get("Email"), "Role": role}
 
 
 def update_password(db: Session, user_id: int, current_password: str, new_password: str) -> dict:

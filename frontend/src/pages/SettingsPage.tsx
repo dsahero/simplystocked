@@ -12,7 +12,8 @@ export default function SettingsPage() {
   const { user: currentUser, getAllUsers, createUser: apiCreateUser, updateUserRole: apiUpdateUserRole, deleteUser: apiDeleteUser } = useAuth();
   const { locations } = useInventory();
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>('users');
+  const canSeeUsers = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>(canSeeUsers ? 'users' : 'locations');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', email: '', role: 'user' as UserRole });
   const [users, setUsers] = useState<ApiUser[]>([]);
@@ -21,18 +22,17 @@ export default function SettingsPage() {
   const [newLocationName, setNewLocationName] = useState('');
 
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (activeTab === 'users' && canSeeUsers) {
       setUsersLoading(true);
       getAllUsers().then(setUsers).catch(console.error).finally(() => setUsersLoading(false));
     }
-  }, [activeTab]);
+  }, [activeTab, canSeeUsers]);
 
   const filteredUsers = users.filter(u =>
     u.Username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const toggleRole = async (userId: number, currentRole: string) => {
-    const newRole = currentRole === 'admin' ? 'manager' : 'admin';
+  const changeRole = async (userId: number, newRole: string) => {
     try {
       const updated = await apiUpdateUserRole(userId, newRole);
       setUsers(users.map(u => u.UserId === userId ? updated : u));
@@ -76,9 +76,11 @@ export default function SettingsPage() {
             {currentUser?.role === 'admin' ? 'Settings & Administration' : 'Settings'}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400">
-            {currentUser?.role === 'admin' 
-              ? 'Manage user permissions and application configuration.' 
-              : 'View application settings and user directory.'}
+            {currentUser?.role === 'admin'
+              ? 'Manage user permissions and application configuration.'
+              : canSeeUsers
+                ? 'View application settings and user directory.'
+                : 'View application settings.'}
           </p>
         </div>
         {activeTab === 'users' && currentUser?.role === 'admin' && (
@@ -95,18 +97,20 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         {/* Sidebar Tabs */}
         <div className="lg:col-span-1 space-y-1">
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
-              activeTab === 'users' 
-                ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown" 
-                : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-            )}
-          >
-            <User className="h-5 w-5" />
-            {currentUser?.role === 'admin' ? 'User Management' : 'User Directory'}
-          </button>
+          {canSeeUsers && (
+            <button
+              onClick={() => setActiveTab('users')}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
+                activeTab === 'users'
+                  ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown"
+                  : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+              )}
+            >
+              <User className="h-5 w-5" />
+              {currentUser?.role === 'admin' ? 'User Management' : 'User Directory'}
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('locations')}
             className={cn(
@@ -135,7 +139,7 @@ export default function SettingsPage() {
 
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
-          {activeTab === 'users' && (
+          {activeTab === 'users' && canSeeUsers && (
             <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center justify-between mb-4">
@@ -167,24 +171,30 @@ export default function SettingsPage() {
                           </p>
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
                             <Mail className="h-3 w-3" />
-                            {u.Username}
+                            {u.Email ?? '—'}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {currentUser?.role === 'admin' ? (
-                          <button
-                            onClick={() => toggleRole(u.UserId, u.Role)}
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
-                              u.Role === 'admin'
-                                ? "bg-brown/10 dark:bg-brown/20 text-brown hover:bg-brown/20 dark:hover:bg-brown/30"
-                                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            )}
-                          >
+                          <div className={cn(
+                            "flex items-center gap-1.5 rounded-full pl-3 pr-1 py-1 text-xs font-bold transition-all",
+                            u.Role === 'admin'
+                              ? "bg-brown/10 dark:bg-brown/20 text-brown"
+                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+                          )}>
                             {u.Role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
-                            {u.Role.toUpperCase()}
-                          </button>
+                            <select
+                              value={u.Role}
+                              onChange={(e) => changeRole(u.UserId, e.target.value)}
+                              disabled={String(u.UserId) === currentUser?.id}
+                              className="bg-transparent border-0 text-xs font-bold focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 pr-1"
+                            >
+                              <option value="user">USER</option>
+                              <option value="manager">MANAGER</option>
+                              <option value="admin">ADMIN</option>
+                            </select>
+                          </div>
                         ) : (
                           <div className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",

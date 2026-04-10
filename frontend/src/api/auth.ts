@@ -3,6 +3,7 @@ import { apiFetch, setToken } from './client';
 export interface ApiUser {
   UserId: number;
   Username: string;
+  Email?: string;
   Role: string;
   access_token?: string;
 }

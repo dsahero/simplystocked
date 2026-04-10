@@ -12,7 +12,7 @@ def get_user_by_username(db: Session, username: str):
 
 def get_user_by_id(db: Session, user_id: int):
     result = db.execute(
-        text("SELECT UserId, Username, Role FROM Users WHERE UserId = :user_id"),
+        text("SELECT UserId, Username, Email, Role FROM Users WHERE UserId = :user_id"),
         {"user_id": user_id}
     )
     return result.mappings().first()
@@ -20,7 +20,7 @@ def get_user_by_id(db: Session, user_id: int):
 
 def get_all_users(db: Session):
     result = db.execute(
-        text("SELECT UserId, Username, Role FROM Users ORDER BY Role, Username")
+        text("SELECT UserId, Username, Email, Role FROM Users ORDER BY Role, Username")
     )
     return result.mappings().all()
 
