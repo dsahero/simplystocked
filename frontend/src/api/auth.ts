@@ -1,23 +1,28 @@
-import { apiFetch } from './client';
+import { apiFetch, setToken } from './client';
 
 export interface ApiUser {
   UserId: number;
   Username: string;
   Role: string;
+  access_token?: string;
 }
 
-export function loginUser(username: string, password: string) {
-  return apiFetch<ApiUser>('/auth/login', {
+export async function loginUser(username: string, password: string) {
+  const user = await apiFetch<ApiUser>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
   });
+  if (user.access_token) setToken(user.access_token);
+  return user;
 }
 
-export function loginWithGoogleApi(credential: string) {
-  return apiFetch<ApiUser>('/auth/google', {
+export async function loginWithGoogleApi(credential: string) {
+  const user = await apiFetch<ApiUser>('/auth/google', {
     method: 'POST',
     body: JSON.stringify({ credential }),
   });
+  if (user.access_token) setToken(user.access_token);
+  return user;
 }
 
 export function getAllUsers() {

@@ -1,5 +1,6 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loginUser, loginWithGoogleApi, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
+import { clearToken } from '../api/client';
 import { User, UserRole } from '../types';
 
 interface AuthContextType {
@@ -27,7 +28,7 @@ function apiUserToUser(u: ApiUser): User {
     id: String(u.UserId),
     name: u.Username,
     email: u.Username, // username is the email
-    role: (u.Role === 'manager' ? 'user' : u.Role) as UserRole,
+    role: u.Role as UserRole,
     avatarUrl: '',
   };
 }
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setUser(null);
     localStorage.removeItem(SESSION_KEY);
+    clearToken();
   };
 
   const updateProfile = async (updates: Partial<User>) => {

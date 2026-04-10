@@ -50,8 +50,7 @@ export default function SettingsPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const backendRole = newUser.role === 'user' ? 'manager' : newUser.role;
-      const created = await apiCreateUser(newUser.username, 'password123', newUser.email, backendRole);
+      const created = await apiCreateUser(newUser.username, 'password123', newUser.email, newUser.role);
       setUsers([...users, created]);
       setIsAddUserModalOpen(false);
       setNewUser({ username: '', email: '', role: 'user' });
@@ -379,8 +378,8 @@ export default function SettingsPage() {
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all appearance-none"
                     >
                       <option value="user">User</option>
+                      <option value="manager">Manager</option>
                       <option value="admin">Administrator</option>
-                      <option value="guest">Guest</option>
                     </select>
                   </div>
                 </div>

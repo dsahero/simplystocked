@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from google.oauth2 import id_token
 from google.auth.transport import requests as g_requests
 from database.queries import auth_queries
+from auth import create_access_token
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -28,12 +29,14 @@ def google_login(db: Session, credential: str) -> dict:
 
     user = auth_queries.get_user_by_google_sub(db, google_sub)
     if user:
-        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"]}
+        token = create_access_token(user["UserId"], user["Username"], user["Role"])
+        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
 
     user = auth_queries.get_user_by_email(db, email)
     if user:
         auth_queries.link_google_sub(db, user["UserId"], google_sub)
-        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"]}
+        token = create_access_token(user["UserId"], user["Username"], user["Role"])
+        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
 
     raise HTTPException(status_code=403, detail="No account found for this Google email. Contact an admin.")
 
@@ -42,7 +45,8 @@ def login(db: Session, username: str, password: str) -> dict:
     user = auth_queries.get_user_by_username(db, username)
     if not user or not pwd_context.verify(password, user["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"]}
+    token = create_access_token(user["UserId"], user["Username"], user["Role"])
+    return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
 
 
 def get_all_users(db: Session) -> list:
