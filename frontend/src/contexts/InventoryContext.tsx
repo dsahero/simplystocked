@@ -1,31 +1,49 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { InventoryItem, Location, AnalyticsData, CheckoutRecord, DailyChecklist, BuyListItem } from '../types';
-import { auth, db } from '../firebase';
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  addDoc, 
-  getDocs,
-  query, 
-  orderBy, 
-  limit,
-  Timestamp,
-  writeBatch
-} from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+﻿import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { InventoryItem, Location, AnalyticsData, CheckoutRecord, DailyChecklist, BuyListItem, InvoiceData } from '../types';
+import { getAllProducts, createProduct, updateProduct as apiUpdateProduct, deleteProduct, ApiProduct } from '../api/products';
+import { setStockBaseline, addStock, transferStock as apiTransferStock, getDashboardStats } from '../api/inventory';
+import { getAllCheckpoints, createCheckpoint, getTransactionsByCheckpoint, createTransaction, ApiTransaction, ApiTransactionItem } from '../api/checkpoints';
 import { getInventoryInsights } from '../services/geminiService';
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+// ─── Fixed locations mapping to the two MySQL programs ────────────────────────
+const FIXED_LOCATIONS: Location[] = [
+  { id: 'open_market', name: 'Open Market' },
+  { id: 'grocery', name: 'Grocery Store' },
+];
+
+const BUY_LIST_KEY = 'simplystocked_buy_list';
+
+// ─── Helper: map an ApiProduct to our InventoryItem ────────────────────────────
+function mapProduct(p: ApiProduct): InventoryItem {
+  return {
+    id: String(p.FoodProductId),
+    name: p.ProductName,
+    category: p.CategoryName,
+    totalQuantity: p.Quantity ?? 0,
+    locations: {
+      open_market: p.OpenMarketQuantity ?? 0,
+      grocery: p.GroceryStoreQuantity ?? 0,
+    },
+    unit: 'units',
+    isPerishable: false,
+    costPerUnit: p.ProductPrice ?? 0,
+    lastRestocked: p.LastUpdated ? p.LastUpdated.split('T')[0] : new Date().toISOString().split('T')[0],
+    minStockLevel: 10,
+  };
+}
+
+// ─── Helper: map ApiTransaction items to CheckoutRecord[] ─────────────────────
+function mapTransactionItems(items: ApiTransactionItem[], tx: ApiTransaction): CheckoutRecord[] {
+  return (items ?? []).map((ti) => ({
+    id: String(ti.TransactionItemId),
+    itemId: String(ti.FoodProductId),
+    itemName: ti.ProductName,
+    quantity: ti.Quantity,
+    costAtTime: ti.ProductPrice ?? 0,
+    locationId: 'open_market',
+    timestamp: new Date().toISOString(),
+    userId: 'system',
+  }));
 }
 
 interface InventoryContextType {
@@ -35,6 +53,7 @@ interface InventoryContextType {
   checkouts: CheckoutRecord[];
   dailyChecklists: DailyChecklist[];
   buyList: BuyListItem[];
+  loading: boolean;
   addItem: (item: Partial<InventoryItem>) => Promise<void>;
   updateItem: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -46,450 +65,235 @@ interface InventoryContextType {
   addToBuyList: (item: Partial<BuyListItem>) => Promise<void>;
   removeFromBuyList: (id: string) => Promise<void>;
   clearBuyList: () => Promise<void>;
+  processPurchasedItems: (purchasedItems: InvoiceData['items'], buyListIdsToRemove: string[]) => Promise<void>;
   getAIInsights: () => Promise<string>;
   seedTestData: () => Promise<void>;
+  refreshInventory: () => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
+// ─── Helper: get-or-create "current" checkpoint ───────────────────────────────
+async function getOrCreateCurrentCheckpoint(): Promise<number> {
+  const checkpoints = await getAllCheckpoints();
+  if (checkpoints.length > 0) {
+    // Use the most recent checkpoint
+    return checkpoints[0].CheckPointId;
+  }
+  // Create an initial checkpoint for the current year
+  const today = new Date().toISOString().split('T')[0];
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+  const yearEnd = `${new Date().getFullYear()}-12-31`;
+  const cp = await createCheckpoint(today, yearStart, yearEnd);
+  return cp.CheckPointId;
+}
+
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [analytics, setAnalytics] = useState<AnalyticsData[]>([]);
   const [checkouts, setCheckouts] = useState<CheckoutRecord[]>([]);
-  const [dailyChecklists, setDailyChecklists] = useState<DailyChecklist[]>([]);
   const [buyList, setBuyList] = useState<BuyListItem[]>([]);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [dailyChecklists] = useState<DailyChecklist[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Buy list lives in localStorage  
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserId(user?.uid || null);
-      setIsAuthReady(true);
-    });
-    return () => unsubscribe();
+    try {
+      const stored = localStorage.getItem(BUY_LIST_KEY);
+      if (stored) setBuyList(JSON.parse(stored));
+    } catch { /* ignore */ }
   }, []);
 
-  const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
-    const errInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      authInfo: {
-        userId: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-        emailVerified: auth.currentUser?.emailVerified,
-        isAnonymous: auth.currentUser?.isAnonymous,
-      },
-      operationType,
-      path
-    };
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  const saveBuyList = (list: BuyListItem[]) => {
+    setBuyList(list);
+    localStorage.setItem(BUY_LIST_KEY, JSON.stringify(list));
   };
 
-  useEffect(() => {
-    if (!isAuthReady || !userId) {
-      // Clear data if not authenticated
-      setItems([]);
-      setLocations([]);
-      setCheckouts([]);
-      setBuyList([]);
-      return;
-    }
-
-    // Real-time listeners
-    const unsubItems = onSnapshot(collection(db, 'products'), (snapshot) => {
-      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'products'));
-
-    const unsubLocations = onSnapshot(collection(db, 'locations'), (snapshot) => {
-      setLocations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Location)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'locations'));
-
-    const unsubCheckouts = onSnapshot(query(collection(db, 'checkouts'), orderBy('timestamp', 'desc'), limit(50)), (snapshot) => {
-      setCheckouts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CheckoutRecord)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'checkouts'));
-
-    const unsubBuyList = onSnapshot(collection(db, 'buyList'), (snapshot) => {
-      setBuyList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BuyListItem)));
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'buyList'));
-
-    const unsubAnalytics = onSnapshot(collection(db, 'analytics'), (snapshot) => {
-      if (!snapshot.empty) {
-        setAnalytics(snapshot.docs.map(doc => doc.data() as AnalyticsData));
-      }
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'analytics'));
-
-    // Initial data migration if empty
-    const checkAndSeed = async () => {
-      try {
-        const itemsSnap = await getDocs(collection(db, 'products'));
-        if (itemsSnap.empty) {
-          const MOCK_LOCATIONS = [
-            { name: 'Main Pantry' },
-            { name: 'Cold Storage' },
-            { name: 'Distribution Center' },
-          ];
-          
-          const locIds: string[] = [];
-          for (const loc of MOCK_LOCATIONS) {
-            const docRef = await addDoc(collection(db, 'locations'), loc);
-            locIds.push(docRef.id);
-          }
-
-          const MOCK_ITEMS = [
-            {
-              name: 'Canned Beans',
-              category: 'Canned Goods',
-              locations: { [locIds[0]]: 100, [locIds[1]]: 50 },
-              unit: 'cans',
-              isPerishable: false,
-              costPerUnit: 0.85,
-              minStockLevel: 50,
-            },
-            {
-              name: 'Whole Milk',
-              category: 'Dairy',
-              locations: { [locIds[1]]: 24 },
-              unit: 'gallons',
-              isPerishable: true,
-              expirationDate: '2026-04-10',
-              costPerUnit: 3.50,
-              minStockLevel: 10,
-            },
-          ];
-
-          for (const item of MOCK_ITEMS) {
-            const totalQuantity = Object.values(item.locations).reduce((a: number, b: any) => a + (b as number), 0) as number;
-            await addDoc(collection(db, 'products'), {
-              ...item,
-              totalQuantity,
-              lastRestocked: new Date().toISOString().split('T')[0],
-            });
-          }
-        }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, 'products (seeding)');
-      }
-    };
-    checkAndSeed();
-
-    return () => {
-      unsubItems();
-      unsubLocations();
-      unsubCheckouts();
-      unsubBuyList();
-      unsubAnalytics();
-    };
-  }, [isAuthReady, userId]);
-
-  // Derive analytics from checkouts if collection is empty or to supplement it
-  const derivedAnalytics = React.useMemo(() => {
-    if (analytics.length > 0) return analytics;
-
-    const days: { [key: string]: AnalyticsData } = {};
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
-    }).reverse();
-
-    last7Days.forEach(date => {
-      days[date] = { date, inStock: 0, usage: 0, cost: 0 };
-    });
-
-    checkouts.forEach(c => {
-      const date = c.timestamp.split('T')[0];
-      if (days[date]) {
-        days[date].usage += c.quantity;
-        days[date].cost += (c.costAtTime || 0) * c.quantity;
-      }
-    });
-
-    // Estimate inStock for each day (simple version: current total)
-    const currentTotal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
-    Object.values(days).forEach(d => {
-      d.inStock = currentTotal;
-    });
-
-    return Object.values(days);
-  }, [analytics, checkouts, items]);
-
-  const addItem = async (item: Partial<InventoryItem>) => {
+  // ─── Fetch inventory from backend ─────────────────────────────────────────
+  const refreshInventory = useCallback(async () => {
+    setLoading(true);
     try {
-      const totalQuantity = Object.values(item.locations || {}).reduce((a: number, b: any) => a + (b as number), 0) as number;
-      await addDoc(collection(db, 'products'), {
-        ...item,
-        totalQuantity,
-        lastRestocked: new Date().toISOString().split('T')[0],
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'products');
-      throw error;
+      const [products] = await Promise.all([getAllProducts()]);
+      setItems(products.map(mapProduct));
+
+      // Load checkout history from the most recent checkpoint
+      try {
+        const checkpoints = await getAllCheckpoints();
+        if (checkpoints.length > 0) {
+          const result = await getTransactionsByCheckpoint(checkpoints[0].CheckPointId);
+          const allCheckouts: CheckoutRecord[] = [];
+          for (const tx of result.transactions ?? []) {
+            allCheckouts.push(...mapTransactionItems(tx.items ?? [], tx));
+          }
+          setCheckouts(allCheckouts);
+        }
+      } catch {
+        // Checkout history not critical — silently ignore
+      }
+    } catch (err) {
+      console.error('Failed to load inventory:', err);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    refreshInventory();
+  }, [refreshInventory]);
+
+  // ─── Derive analytics from items + checkouts ──────────────────────────────
+  const analytics = React.useMemo<AnalyticsData[]>(() => {
+    const last7 = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+    const currentTotal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+    return last7.map(date => ({
+      date,
+      inStock: currentTotal,
+      usage: checkouts.filter(c => c.timestamp.startsWith(date)).reduce((a, c) => a + c.quantity, 0),
+      cost: checkouts.filter(c => c.timestamp.startsWith(date)).reduce((a, c) => a + c.costAtTime * c.quantity, 0),
+    }));
+  }, [items, checkouts]);
+
+  // ─── CRUD ─────────────────────────────────────────────────────────────────
+  const addItem = async (item: Partial<InventoryItem>) => {
+    // Determine category_id — use 1 as fallback (backend must have at least one category)
+    const openQty = item.locations?.['open_market'] ?? 0;
+    const groceryQty = item.locations?.['grocery'] ?? 0;
+    await createProduct(
+      item.name || 'New Item',
+      item.costPerUnit ?? 0,
+      1, // default category — user can update
+      openQty,
+      groceryQty
+    );
+    await refreshInventory();
   };
 
   const updateItem = async (id: string, updates: Partial<InventoryItem>) => {
-    try {
-      const itemRef = doc(db, 'products', id);
-      const currentItem = items.find(i => i.id === id);
-      if (!currentItem) return;
+    const numId = Number(id);
+    const currentItem = items.find(i => i.id === id);
+    if (!currentItem) return;
 
-      const newLocations = updates.locations || currentItem.locations;
-      const totalQuantity = Object.values(newLocations).reduce((a: number, b: any) => a + (b as number), 0) as number;
-
-      if (totalQuantity <= 0) {
-        await deleteDoc(itemRef);
-      } else {
-        await updateDoc(itemRef, {
-          ...updates,
-          totalQuantity
-        });
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `products/${id}`);
-      throw error;
+    // Update product details if name/price changed
+    if (updates.name || updates.costPerUnit !== undefined) {
+      await apiUpdateProduct(numId, updates.name ?? currentItem.name, updates.costPerUnit ?? currentItem.costPerUnit, 1);
     }
+
+    // Update stock baseline if locations changed
+    if (updates.locations) {
+      const openQty = updates.locations['open_market'] ?? currentItem.locations['open_market'] ?? 0;
+      const groceryQty = updates.locations['grocery'] ?? currentItem.locations['grocery'] ?? 0;
+      await setStockBaseline(numId, openQty, groceryQty);
+    }
+
+    await refreshInventory();
   };
 
   const deleteItem = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'products', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
-      throw error;
-    }
+    await deleteProduct(Number(id));
+    await refreshInventory();
   };
 
   const relocateItem = async (id: string, from: string, to: string, quantity: number) => {
-    try {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
-
-      const fromQty = item.locations[from] || 0;
-      const toQty = item.locations[to] || 0;
-      const actualMove = Math.min(fromQty, quantity);
-      
-      const newLocations = { ...item.locations };
-      newLocations[from] = fromQty - actualMove;
-      newLocations[to] = toQty + actualMove;
-      
-      if (newLocations[from] === 0) delete newLocations[from];
-      
-      await updateDoc(doc(db, 'products', id), {
-        locations: newLocations
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `products/${id} (relocate)`);
-      throw error;
-    }
+    const fromProgram = from as 'open_market' | 'grocery';
+    const toProgram = to as 'open_market' | 'grocery';
+    await apiTransferStock(Number(id), fromProgram, toProgram, quantity);
+    await refreshInventory();
   };
 
   const checkoutItem = async (itemId: string, locationId: string, quantity: number, userId: string) => {
-    try {
-      const item = items.find(i => i.id === itemId);
-      if (!item || !item.locations[locationId] || item.locations[locationId] < quantity) return;
-
-      const batch = writeBatch(db);
-
-      // 1. Create checkout record
-      const checkoutRef = doc(collection(db, 'checkouts'));
-      batch.set(checkoutRef, {
-        itemId,
-        itemName: item.name,
-        quantity,
-        costAtTime: item.costPerUnit,
-        locationId,
-        timestamp: new Date().toISOString(),
-        userId,
-      });
-
-      // 2. Update item quantity
-      const itemRef = doc(db, 'products', itemId);
-      const newLocs = { ...item.locations };
-      newLocs[locationId] -= quantity;
-      const newTotal = item.totalQuantity - quantity;
-
-      if (newLocs[locationId] === 0) delete newLocs[locationId];
-
-      if (newTotal <= 0) {
-        batch.delete(itemRef);
-      } else {
-        batch.update(itemRef, {
-          locations: newLocs,
-          totalQuantity: newTotal
-        });
-      }
-
-      await batch.commit();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'checkout');
-      throw error;
-    }
+    const checkpointId = await getOrCreateCurrentCheckpoint();
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    await createTransaction(checkpointId, [
+      { product_id: Number(itemId), quantity, unit_price: item.costPerUnit }
+    ]);
+    await refreshInventory();
   };
 
-  const submitDailyChecklist = async (checklist: DailyChecklist) => {
-    try {
-      await addDoc(collection(db, 'dailyChecklists'), checklist);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'dailyChecklists');
-      throw error;
-    }
+  const submitDailyChecklist = async (_checklist: DailyChecklist) => {
+    // No backend endpoint — store locally only
   };
 
-  const addLocation = async (name: string) => {
-    try {
-      await addDoc(collection(db, 'locations'), { name });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'locations');
-      throw error;
-    }
-  };
+  // Locations are fixed — these are no-ops since backend doesn't support custom locations
+  const addLocation = async (_name: string) => { /* fixed locations only */ };
+  const deleteLocation = async (_id: string) => { /* fixed locations only */ };
 
-  const deleteLocation = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'locations', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `locations/${id}`);
-      throw error;
-    }
-  };
-
+  // ─── Buy list (localStorage only) ─────────────────────────────────────────
   const addToBuyList = async (item: Partial<BuyListItem>) => {
-    try {
-      await addDoc(collection(db, 'buyList'), {
-        name: item.name || 'Unknown Item',
-        quantity: item.quantity || 1,
-        unit: item.unit || 'units',
-        addedAt: new Date().toISOString(),
-        isSuggested: item.isSuggested || false,
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'buyList');
-      throw error;
-    }
+    const newItem: BuyListItem = {
+      id: `buy-${Date.now()}`,
+      name: item.name || 'Unknown Item',
+      quantity: item.quantity || 1,
+      unit: item.unit || 'units',
+      addedAt: new Date().toISOString(),
+      isSuggested: item.isSuggested || false,
+    };
+    saveBuyList([...buyList, newItem]);
   };
 
   const removeFromBuyList = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'buyList', id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `buyList/${id}`);
-      throw error;
-    }
+    saveBuyList(buyList.filter(i => i.id !== id));
   };
 
   const clearBuyList = async () => {
-    try {
-      const batch = writeBatch(db);
-      buyList.forEach(item => {
-        batch.delete(doc(db, 'buyList', item.id));
-      });
-      await batch.commit();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, 'buyList (clear)');
-      throw error;
+    saveBuyList([]);
+  };
+
+  const processPurchasedItems = async (purchasedItems: InvoiceData['items'], buyListIdsToRemove: string[]) => {
+    // Add stock via backend for each purchased item matched by name
+    for (const pItem of purchasedItems) {
+      const existing = items.find(i => i.name.toLowerCase() === pItem.name.toLowerCase());
+      if (existing) {
+        await addStock(Number(existing.id), 'open_market', pItem.quantity);
+      } else {
+        // Create new product
+        await createProduct(pItem.name, pItem.cost / pItem.quantity, 1, pItem.quantity, 0);
+      }
     }
+    // Remove from buy list
+    saveBuyList(buyList.filter(i => !buyListIdsToRemove.includes(i.id)));
+    await refreshInventory();
   };
 
   const seedTestData = async () => {
-    if (!userId || userId.includes('mock')) {
-      throw new Error('Authentication required: Please log in with a Google account to write to Firestore.');
-    }
-    try {
-      const batch = writeBatch(db);
-      
-      // 1. Add more locations
-      const locs = ['Pantry A', 'Pantry B', 'Freezer 1', 'Dry Storage'];
-      const locRefs = locs.map(() => doc(collection(db, 'locations')));
-      locRefs.forEach((ref, i) => batch.set(ref, { name: locs[i] }));
-
-      // 2. Add diverse products
-      const products = [
-        { name: 'Peanut Butter', category: 'Proteins', unit: 'jars', cost: 2.5, min: 20 },
-        { name: 'Pasta', category: 'Grains', unit: 'boxes', cost: 1.2, min: 40 },
-        { name: 'Canned Tuna', category: 'Proteins', unit: 'cans', cost: 1.5, min: 30 },
-        { name: 'Rice (5lb)', category: 'Grains', unit: 'bags', cost: 4.0, min: 15 },
-        { name: 'Apple Juice', category: 'Beverages', unit: 'bottles', cost: 2.0, min: 10 },
-        { name: 'Cereal', category: 'Breakfast', unit: 'boxes', cost: 3.0, min: 12 },
-      ];
-
-      const productRefs = products.map(() => doc(collection(db, 'products')));
-      productRefs.forEach((ref, i) => {
-        const p = products[i];
-        const locations: { [key: string]: number } = {};
-        locRefs.forEach(lRef => {
-          locations[lRef.id] = Math.floor(Math.random() * 50) + 10;
-        });
-        const totalQuantity = Object.values(locations).reduce((a, b) => a + b, 0);
-        
-        batch.set(ref, {
-          name: p.name,
-          category: p.category,
-          unit: p.unit,
-          costPerUnit: p.cost,
-          minStockLevel: p.min,
-          locations,
-          totalQuantity,
-          isPerishable: false,
-          lastRestocked: new Date().toISOString().split('T')[0]
-        });
-      });
-
-      // 3. Add checkout history for the last 7 days
-      for (let i = 0; i < 20; i++) {
-        const pIdx = Math.floor(Math.random() * productRefs.length);
-        const lIdx = Math.floor(Math.random() * locRefs.length);
-        const date = new Date();
-        date.setDate(date.getDate() - Math.floor(Math.random() * 7));
-        
-        const checkoutRef = doc(collection(db, 'checkouts'));
-        batch.set(checkoutRef, {
-          itemId: productRefs[pIdx].id,
-          itemName: products[pIdx].name,
-          quantity: Math.floor(Math.random() * 5) + 1,
-          costAtTime: products[pIdx].cost,
-          locationId: locRefs[lIdx].id,
-          timestamp: date.toISOString(),
-          userId: userId || 'system'
-        });
-      }
-
-      await batch.commit();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'seedTestData');
-      throw error;
-    }
+    throw new Error('Seed test data is not available in MySQL mode. Add products via the Inventory page.');
   };
 
   const getAIInsights = async () => {
     try {
       return await getInventoryInsights(items, checkouts);
-    } catch (error) {
-      console.error('Error getting AI insights:', error);
-      return "Unable to generate insights at this time.";
+    } catch {
+      return 'Unable to generate insights at this time.';
     }
   };
 
   return (
-    <InventoryContext.Provider value={{ 
-      items, 
-      locations, 
-      analytics: derivedAnalytics, 
-      checkouts, 
-      dailyChecklists, 
-      buyList, 
-      addItem, 
-      updateItem, 
-      deleteItem, 
-      relocateItem, 
-      checkoutItem, 
-      submitDailyChecklist, 
-      addLocation, 
-      deleteLocation, 
-      addToBuyList, 
-      removeFromBuyList, 
+    <InventoryContext.Provider value={{
+      items,
+      locations: FIXED_LOCATIONS,
+      analytics,
+      checkouts,
+      dailyChecklists,
+      buyList,
+      loading,
+      addItem,
+      updateItem,
+      deleteItem,
+      relocateItem,
+      checkoutItem,
+      submitDailyChecklist,
+      addLocation,
+      deleteLocation,
+      addToBuyList,
+      removeFromBuyList,
       clearBuyList,
+      processPurchasedItems,
       getAIInsights,
-      seedTestData
+      seedTestData,
+      refreshInventory,
     }}>
       {children}
     </InventoryContext.Provider>

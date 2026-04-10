@@ -8,6 +8,7 @@ router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
 
 class VendorRequest(BaseModel):
+    vendor_name: str
     email: str
     phone: str
     hq_address: str
@@ -29,7 +30,7 @@ def get_vendor_by_id(vendor_id: int, db: Session = Depends(get_db)):
 @router.post("/")
 def create_vendor(body: VendorRequest, db: Session = Depends(get_db)):
     return vendor_controller.create_vendor(
-        db, body.email, body.phone, body.hq_address,
+        db, body.vendor_name, body.email, body.phone, body.hq_address,
         body.hq_city, body.hq_state, body.hq_zip
     )
 
@@ -37,7 +38,7 @@ def create_vendor(body: VendorRequest, db: Session = Depends(get_db)):
 @router.put("/{vendor_id}")
 def update_vendor(vendor_id: int, body: VendorRequest, db: Session = Depends(get_db)):
     return vendor_controller.update_vendor(
-        db, vendor_id, body.email, body.phone, body.hq_address,
+        db, vendor_id, body.vendor_name, body.email, body.phone, body.hq_address,
         body.hq_city, body.hq_state, body.hq_zip
     )
 

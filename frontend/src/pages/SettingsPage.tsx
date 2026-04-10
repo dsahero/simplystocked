@@ -1,71 +1,72 @@
-import React, { useState } from 'react';
-import { User, Shield, ShieldCheck, Mail, Plus, Trash2, Search, UserPlus, Settings, MapPin, Building2, X, Moon, Sun, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Shield, ShieldCheck, Mail, Plus, Trash2, Search, UserPlus, Settings, MapPin, Building2, X, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useInventory } from '../contexts/InventoryContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { cn } from '../lib/utils';
 import { UserRole, User as UserType } from '../types';
+import { ApiUser } from '../api/auth';
 
 export default function SettingsPage() {
-  const { user: currentUser } = useAuth();
-  const { locations, addLocation, deleteLocation } = useInventory();
+  const { user: currentUser, getAllUsers, createUser: apiCreateUser, updateUserRole: apiUpdateUserRole, deleteUser: apiDeleteUser } = useAuth();
+  const { locations } = useInventory();
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>('users');
+  const canSeeUsers = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>(canSeeUsers ? 'users' : 'locations');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' as UserRole });
-  
-  const [users, setUsers] = useState<UserType[]>([
-    { id: '1', name: 'Alex Admin', email: 'alex@university.edu', role: 'admin', avatarUrl: '/icons/default-pfp.jpg' },
-    { id: '2', name: 'Sarah Staff', email: 'sarah@university.edu', role: 'user', avatarUrl: '/icons/default-pfp.jpg' },
-    { id: '3', name: 'Mike Volunteer', email: 'mike@university.edu', role: 'user', avatarUrl: '/icons/default-pfp.jpg' },
-    { id: '4', name: 'Jane Guest', email: 'jane@university.edu', role: 'guest', avatarUrl: '/icons/default-pfp.jpg' },
-  ]);
-
+  const [newUser, setNewUser] = useState({ username: '', email: '', role: 'user' as UserRole });
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [newLocationName, setNewLocationName] = useState('');
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    if (activeTab === 'users' && canSeeUsers) {
+      setUsersLoading(true);
+      getAllUsers().then(setUsers).catch(console.error).finally(() => setUsersLoading(false));
+    }
+  }, [activeTab, canSeeUsers]);
+
+  const filteredUsers = users.filter(u =>
+    u.Username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const toggleRole = (userId: string) => {
-    setUsers(users.map(u => {
-      if (u.id === userId) {
-        const newRole: UserRole = u.role === 'admin' ? 'user' : 'admin';
-        return { ...u, role: newRole };
-      }
-      return u;
-    }));
+  const changeRole = async (userId: number, newRole: string) => {
+    try {
+      const updated = await apiUpdateUserRole(userId, newRole);
+      setUsers(users.map(u => u.UserId === userId ? updated : u));
+    } catch (err) { console.error(err); }
   };
 
-  const deleteUser = (userId: string) => {
-    if (userId === currentUser?.id) return;
-    setUsers(users.filter(u => u.id !== userId));
+  const handleDeleteUser = async (userId: number) => {
+    if (String(userId) === currentUser?.id) return;
+    try {
+      await apiDeleteUser(userId);
+      setUsers(users.filter(u => u.UserId !== userId));
+    } catch (err) { console.error(err); }
   };
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userToAdd: UserType = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      avatarUrl: '/icons/default-pfp.jpg',
-    };
-    setUsers([...users, userToAdd]);
-    setIsAddUserModalOpen(false);
-    setNewUser({ name: '', email: '', role: 'user' });
-    alert(`User created! Temporary password: password123`);
+    try {
+      const created = await apiCreateUser(newUser.username, 'password123', newUser.email, newUser.role);
+      setUsers([...users, created]);
+      setIsAddUserModalOpen(false);
+      setNewUser({ username: '', email: '', role: 'user' });
+      alert(`User created! Temporary password: password123`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create user.');
+    }
   };
 
   const handleAddLocation = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newLocationName.trim()) return;
-    addLocation(newLocationName.trim());
+    // Locations are fixed (open_market / grocery) — no custom locations supported
+    alert('Custom locations are not supported. The system uses Open Market and Grocery Store as fixed locations.');
     setNewLocationName('');
   };
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -75,9 +76,11 @@ export default function SettingsPage() {
             {currentUser?.role === 'admin' ? 'Settings & Administration' : 'Settings'}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400">
-            {currentUser?.role === 'admin' 
-              ? 'Manage user permissions and application configuration.' 
-              : 'View application settings and user directory.'}
+            {currentUser?.role === 'admin'
+              ? 'Manage user permissions and application configuration.'
+              : canSeeUsers
+                ? 'View application settings and user directory.'
+                : 'View application settings.'}
           </p>
         </div>
         {activeTab === 'users' && currentUser?.role === 'admin' && (
@@ -94,18 +97,20 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         {/* Sidebar Tabs */}
         <div className="lg:col-span-1 space-y-1">
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
-              activeTab === 'users' 
-                ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown" 
-                : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-            )}
-          >
-            <User className="h-5 w-5" />
-            {currentUser?.role === 'admin' ? 'User Management' : 'User Directory'}
-          </button>
+          {canSeeUsers && (
+            <button
+              onClick={() => setActiveTab('users')}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
+                activeTab === 'users'
+                  ? "bg-brown/5 dark:bg-brown/10 font-bold text-brown"
+                  : "font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+              )}
+            >
+              <User className="h-5 w-5" />
+              {currentUser?.role === 'admin' ? 'User Management' : 'User Directory'}
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('locations')}
             className={cn(
@@ -134,7 +139,7 @@ export default function SettingsPage() {
 
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
-          {activeTab === 'users' && (
+          {activeTab === 'users' && canSeeUsers && (
             <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center justify-between mb-4">
@@ -152,55 +157,60 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {filteredUsers.map((u) => (
-                    <div key={u.id} className="flex items-center justify-between p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                  {usersLoading ? (
+                    <p className="text-center text-sm text-neutral-400 py-8">Loading users...</p>
+                  ) : filteredUsers.map((u) => (
+                    <div key={u.UserId} className="flex items-center justify-between p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                       <div className="flex items-center gap-4">
-                        <img 
-                          src={u.avatarUrl || '/icons/default-pfp.jpg'} 
-                          alt={u.name} 
-                          className="h-10 w-10 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover" 
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
-                          }}
-                        />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brown/10 text-brown font-bold text-sm">
+                          {u.Username.charAt(0).toUpperCase()}
+                        </div>
                         <div>
-                          <p className="font-bold text-neutral-900 dark:text-white">{u.name} {u.id === currentUser?.id && <span className="text-xs font-normal text-neutral-400 ml-1">(You)</span>}</p>
+                          <p className="font-bold text-neutral-900 dark:text-white">
+                            {u.Username} {String(u.UserId) === currentUser?.id && <span className="text-xs font-normal text-neutral-400 ml-1">(You)</span>}
+                          </p>
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
                             <Mail className="h-3 w-3" />
-                            {u.email}
+                            {u.Email ?? '—'}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {currentUser?.role === 'admin' ? (
-                          <button
-                            onClick={() => toggleRole(u.id)}
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
-                              u.role === 'admin' 
-                                ? "bg-brown/10 dark:bg-brown/20 text-brown hover:bg-brown/20 dark:hover:bg-brown/30" 
-                                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            )}
-                          >
-                            {u.role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
-                            {u.role.toUpperCase()}
-                          </button>
+                          <div className={cn(
+                            "flex items-center gap-1.5 rounded-full pl-3 pr-1 py-1 text-xs font-bold transition-all",
+                            u.Role === 'admin'
+                              ? "bg-brown/10 dark:bg-brown/20 text-brown"
+                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+                          )}>
+                            {u.Role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
+                            <select
+                              value={u.Role}
+                              onChange={(e) => changeRole(u.UserId, e.target.value)}
+                              disabled={String(u.UserId) === currentUser?.id}
+                              className="bg-transparent border-0 text-xs font-bold focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 pr-1"
+                            >
+                              <option value="user">USER</option>
+                              <option value="manager">MANAGER</option>
+                              <option value="admin">ADMIN</option>
+                            </select>
+                          </div>
                         ) : (
                           <div className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
-                            u.role === 'admin' 
-                              ? "bg-brown/5 dark:bg-brown/10 text-brown" 
+                            u.Role === 'admin'
+                              ? "bg-brown/5 dark:bg-brown/10 text-brown"
                               : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400"
                           )}>
-                            {u.role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
-                            {u.role.toUpperCase()}
+                            {u.Role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
+                            {u.Role.toUpperCase()}
                           </div>
                         )}
-                        
+
                         {currentUser?.role === 'admin' && (
                           <button
-                            onClick={() => deleteUser(u.id)}
-                            disabled={u.id === currentUser?.id}
+                            onClick={() => handleDeleteUser(u.UserId)}
+                            disabled={String(u.UserId) === currentUser?.id}
                             className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-0 transition-all"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -223,23 +233,10 @@ export default function SettingsPage() {
             <div className="space-y-6">
               {currentUser?.role === 'admin' && (
                 <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">
-                  <h2 className="text-lg font-bold mb-4 dark:text-white">Add New Location</h2>
-                  <form onSubmit={handleAddLocation} className="flex gap-3">
-                    <input
-                      type="text"
-                      value={newLocationName}
-                      onChange={(e) => setNewLocationName(e.target.value)}
-                      placeholder="Location name (e.g. Warehouse B)"
-                      className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-4 py-2 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newLocationName.trim()}
-                      className="rounded-xl bg-neutral-900 dark:bg-white px-6 py-2 text-sm font-semibold text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 disabled:opacity-50 transition-all"
-                    >
-                      Add Location
-                    </button>
-                  </form>
+                  <h2 className="text-lg font-bold mb-2 dark:text-white">Storage Locations</h2>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+                    Locations are fixed to the two distribution programs below. Custom locations are managed in the database.
+                  </p>
                 </div>
               )}
 
@@ -255,14 +252,7 @@ export default function SettingsPage() {
                           </div>
                           <span className="font-bold text-neutral-900 dark:text-white">{loc.name}</span>
                         </div>
-                        {currentUser?.role === 'admin' && (
-                          <button
-                            onClick={() => deleteLocation(loc.id)}
-                            className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        {/* Fixed locations cannot be deleted */}
                       </div>
                     ))}
                   </div>
@@ -354,16 +344,16 @@ export default function SettingsPage() {
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Full Name
+                    Username (used to log in with password)
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                     <input
                       type="text"
                       required
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                      placeholder="John Doe"
+                      value={newUser.username}
+                      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                      placeholder="jane_doe"
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
@@ -371,7 +361,7 @@ export default function SettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Email Address
+                    Email (used for Google sign-in)
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
@@ -380,7 +370,7 @@ export default function SettingsPage() {
                       required
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      placeholder="john@university.edu"
+                      placeholder="jane@gmail.com"
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>
@@ -398,8 +388,8 @@ export default function SettingsPage() {
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all appearance-none"
                     >
                       <option value="user">User</option>
+                      <option value="manager">Manager</option>
                       <option value="admin">Administrator</option>
-                      <option value="guest">Guest</option>
                     </select>
                   </div>
                 </div>

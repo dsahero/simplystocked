@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'user' | 'guest';
+export type UserRole = 'admin' | 'manager' | 'user' | 'guest';
 
 export interface User {
   id: string;
@@ -30,14 +30,27 @@ export interface Location {
   name: string;
 }
 
+export interface InvoiceItem {
+  name: string;
+  vendorSku?: string;        // Item No. (FSWV/Keany) | Product Number (US Foods)
+  packSize?: string;         // "40 LB" (Keany) | "48/4.25 OZ" (US Foods) | embedded in name (FSWV)
+  unit: string;              // "Case" (FSWV/Keany) | "CS" (US Foods) | "Pound" (FSWV bulk)
+  quantity: number;          // shipped / received
+  quantityOrdered?: number;  // Keany: ordered may differ from shipped
+  unitPrice: number;         // Unit Fee (FSWV) | Unit Price (Keany/US Foods)
+  cost: number;              // extended / line total
+  brand?: string;            // Label col (US Foods) | parsed from "(KA)" prefix (FSWV) | absent (Keany)
+  grossWeightLbs?: number;   // Gross Weight col (FSWV) | per-unit pack weight (Keany)
+  storageType?: string;      // Dry | Refrigerated | Frozen (US Foods)
+  isPerishable: boolean;
+  expirationDate?: string;
+  _priceLabel?: string;      // original column name: "Unit Fee" | "Unit Price"
+}
+
 export interface InvoiceData {
-  items: {
-    name: string;
-    quantity: number;
-    cost: number;
-    isPerishable: boolean;
-    expirationDate?: string;
-  }[];
+  vendorName?: string;
+  invoiceNumber?: string;
+  items: InvoiceItem[];
   totalCost: number;
   date: string;
 }

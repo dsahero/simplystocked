@@ -1,31 +1,68 @@
+import os
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from google.oauth2 import id_token
+from google.auth.transport import requests as g_requests
 from database.queries import auth_queries
+from auth import create_access_token
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+
+def google_login(db: Session, credential: str) -> dict:
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google sign-in not configured")
+    try:
+        info = id_token.verify_oauth2_token(
+            credential, g_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    google_sub = info["sub"]
+    email = info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account has no email")
+
+    user = auth_queries.get_user_by_google_sub(db, google_sub)
+    if user:
+        token = create_access_token(user["UserId"], user["Username"], user["Role"])
+        return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
+
+    user = auth_queries.get_user_by_email(db, email)
+    if user:
+        auth_queries.link_google_sub(db, user["UserId"], google_sub)
+        token = create_access_token(user["UserId"], user["Username"], user["Role"])
+        return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
+
+    raise HTTPException(status_code=403, detail="No account found for this Google email. Contact an admin.")
 
 
 def login(db: Session, username: str, password: str) -> dict:
     user = auth_queries.get_user_by_username(db, username)
     if not user or not pwd_context.verify(password, user["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"]}
+    token = create_access_token(user["UserId"], user["Username"], user["Role"])
+    return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
 
 
 def get_all_users(db: Session) -> list:
     return [dict(u) for u in auth_queries.get_all_users(db)]
 
 
-def create_user(db: Session, username: str, password: str, role: str) -> dict:
-    existing = auth_queries.get_user_by_username(db, username)
-    if existing:
+def create_user(db: Session, username: str, password: str, email: str, role: str) -> dict:
+    if auth_queries.get_user_by_username(db, username):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    if auth_queries.get_user_by_email(db, email):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
     if role not in ("admin", "manager", "user"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
     password_hash = pwd_context.hash(password)
-    user_id = auth_queries.create_user(db, username, password_hash, role)
-    return {"UserId": user_id, "Username": username, "Role": role}
+    user_id = auth_queries.create_user(db, username, password_hash, email, role)
+    return {"UserId": user_id, "Username": username, "Email": email, "Role": role}
 
 
 def update_user_role(db: Session, user_id: int, role: str) -> dict:
@@ -35,7 +72,7 @@ def update_user_role(db: Session, user_id: int, role: str) -> dict:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     auth_queries.update_user_role(db, user_id, role)
-    return {"UserId": user_id, "Username": user["Username"], "Role": role}
+    return {"UserId": user_id, "Username": user["Username"], "Email": user.get("Email"), "Role": role}
 
 
 def update_password(db: Session, user_id: int, current_password: str, new_password: str) -> dict:

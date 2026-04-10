@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { InventoryProvider } from './contexts/InventoryContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -7,10 +8,12 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import InventoryPage from './pages/InventoryPage';
-import AnalyticsPage from './pages/AnalyticsPage';
 import UploadInvoicesPage from './pages/UploadInvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import AccountPage from './pages/AccountPage';
+import VendorsPage from './pages/VendorsPage';
+import CheckpointsPage from './pages/CheckpointsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -35,6 +38,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ThemeProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <InventoryProvider>
           <BrowserRouter>
@@ -53,15 +57,29 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
+              
+              
               <Route path="/analytics" element={
                 <ProtectedRoute>
                   <AnalyticsPage />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/upload" element={
                 <ProtectedRoute>
                   <UploadInvoicesPage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/vendors" element={
+                <ProtectedRoute>
+                  <VendorsPage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/checkpoints" element={
+                <ProtectedRoute>
+                  <CheckpointsPage />
                 </ProtectedRoute>
               } />
 
@@ -83,6 +101,7 @@ export default function App() {
           </BrowserRouter>
         </InventoryProvider>
       </AuthProvider>
+      </GoogleOAuthProvider>
     </ThemeProvider>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Package, BarChart2, Upload, Settings, LogOut, User, ChevronDown, LayoutDashboard, Moon, Sun } from 'lucide-react';
+import { Menu, X, Package, BarChart2, Upload, Settings, LogOut, User, ChevronDown, LayoutDashboard, Moon, Sun, Truck, ClipboardCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -24,6 +24,8 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Inventory', icon: Package, path: '/inventory' },
     { name: 'Analytics', icon: BarChart2, path: '/analytics' },
     { name: 'Upload Invoices', icon: Upload, path: '/upload' },
+    { name: 'Vendors', icon: Truck, path: '/vendors' },
+    { name: 'Checkpoints', icon: ClipboardCheck, path: '/checkpoints' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
@@ -83,7 +85,7 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
                   <span className="text-sm font-bold text-forest dark:text-white leading-none">{user?.name || 'User'}</span>
-                  <span className="text-[10px] font-bold text-forest/40 dark:text-neutral-500 mt-1 uppercase tracking-wider">Admin</span>
+                  <span className="text-[10px] font-bold text-forest/40 dark:text-neutral-500 mt-1 uppercase tracking-wider">{user?.role || 'User'}</span>
                 </div>
                 <ChevronDown className={cn("h-4 w-4 text-forest/20 transition-transform", isProfileOpen && "rotate-180")} />
               </button>
