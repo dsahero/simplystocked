@@ -30,13 +30,13 @@ def google_login(db: Session, credential: str) -> dict:
     user = auth_queries.get_user_by_google_sub(db, google_sub)
     if user:
         token = create_access_token(user["UserId"], user["Username"], user["Role"])
-        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
+        return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
 
     user = auth_queries.get_user_by_email(db, email)
     if user:
         auth_queries.link_google_sub(db, user["UserId"], google_sub)
         token = create_access_token(user["UserId"], user["Username"], user["Role"])
-        return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
+        return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
 
     raise HTTPException(status_code=403, detail="No account found for this Google email. Contact an admin.")
 
@@ -46,7 +46,7 @@ def login(db: Session, username: str, password: str) -> dict:
     if not user or not pwd_context.verify(password, user["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = create_access_token(user["UserId"], user["Username"], user["Role"])
-    return {"UserId": user["UserId"], "Username": user["Username"], "Role": user["Role"], "access_token": token}
+    return {"UserId": user["UserId"], "Username": user["Username"], "Email": user.get("Email"), "Role": user["Role"], "access_token": token}
 
 
 def get_all_users(db: Session) -> list:

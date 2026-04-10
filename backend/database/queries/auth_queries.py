@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 def get_user_by_username(db: Session, username: str):
     result = db.execute(
-        text("SELECT UserId, Username, password_hash, Role FROM Users WHERE Username = :username"),
+        text("SELECT UserId, Username, password_hash, Email, Role FROM Users WHERE Username = :username"),
         {"username": username}
     )
     return result.mappings().first()
@@ -53,7 +53,7 @@ def update_password(db: Session, user_id: int, password_hash: str):
 
 def get_user_by_google_sub(db: Session, google_sub: str):
     result = db.execute(
-        text("SELECT UserId, Username, Role FROM Users WHERE google_sub = :sub"),
+        text("SELECT UserId, Username, Email, Role FROM Users WHERE google_sub = :sub"),
         {"sub": google_sub},
     )
     return result.mappings().first()
@@ -61,7 +61,7 @@ def get_user_by_google_sub(db: Session, google_sub: str):
 
 def get_user_by_email(db: Session, email: str):
     result = db.execute(
-        text("SELECT UserId, Username, Role FROM Users WHERE Email = :email"),
+        text("SELECT UserId, Username, Email, Role FROM Users WHERE Email = :email"),
         {"email": email},
     )
     return result.mappings().first()

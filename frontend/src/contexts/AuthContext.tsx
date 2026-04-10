@@ -27,7 +27,7 @@ function apiUserToUser(u: ApiUser): User {
   return {
     id: String(u.UserId),
     name: u.Username,
-    email: u.Username, // username is the email
+    email: u.Email ?? '',
     role: u.Role as UserRole,
     avatarUrl: '',
   };
