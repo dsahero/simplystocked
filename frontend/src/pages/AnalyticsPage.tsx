@@ -6,14 +6,16 @@ import {
 import { Loader2, TrendingUp, Package, AlertTriangle, DollarSign, Users, Trash2, Truck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
-  getDashboardStats, getStockTrends, getDistributionByCategory,
+  getDashboardStats, getStockTrends, getReceivedVsDistributed,
+  getDistributionByCategory,
   getDistributionOverTime, getWasteSummary, getTopProducts,
   getVendorSpending, getProgramComparison, getCheckpointTrends,
-  DashboardStats, StockTrendPoint, CategoryDistribution,
+  DashboardStats, StockTrendPoint, ReceivedVsDistributed, CategoryDistribution,
   DistributionPeriod, WasteSummary, TopProduct,
   VendorSpending, ProgramComparison, CheckpointStats,
 } from '../api/analytics';
 import { getAllProducts, ApiProduct } from '../api/products';
+import { getAllCategories, ApiCategory } from '../api/categories';
 
 // ── Color palette ────────────────────────────────────────────────────────────
 const C = {
@@ -89,16 +91,21 @@ export default function AnalyticsPage() {
   const [programCmp, setProgramCmp] = useState<ProgramComparison | null>(null);
   const [cpTrends, setCpTrends] = useState<CheckpointStats[]>([]);
 
-  // Stock trend controls
+  // Stock trend controls (by product)
   const [trendDays, setTrendDays] = useState(90);
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [trendProductId, setTrendProductId] = useState<number | ''>('');
+
+  // Received vs Distributed
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [recvDist, setRecvDist] = useState<ReceivedVsDistributed[]>([]);
+  const [recvDistCategoryId, setRecvDistCategoryId] = useState<number | ''>('');
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const [dash, st, cd, dt, ws, tp, vs, pc, ct, prods] = await Promise.all([
+        const [dash, st, cd, dt, ws, tp, vs, pc, ct, prods, cats, rd] = await Promise.all([
           getDashboardStats(),
           getStockTrends(undefined, 90),
           getDistributionByCategory(),
@@ -109,6 +116,8 @@ export default function AnalyticsPage() {
           getProgramComparison(),
           getCheckpointTrends(),
           getAllProducts(),
+          getAllCategories(),
+          getReceivedVsDistributed(),
         ]);
         setDashboard(dash);
         setStockTrends(st);
@@ -120,6 +129,8 @@ export default function AnalyticsPage() {
         setProgramCmp(pc);
         setCpTrends(ct);
         setProducts(prods);
+        setCategories(cats);
+        setRecvDist(rd);
       } catch (e) {
         console.error('Failed to load analytics', e);
       } finally {
@@ -135,6 +146,24 @@ export default function AnalyticsPage() {
       setStockTrends(data);
     } catch { /* ignore */ }
   };
+
+  const reloadRecvDist = async (cid: number | '') => {
+    try {
+      setRecvDist(await getReceivedVsDistributed(cid || undefined));
+    } catch { /* ignore */ }
+  };
+
+  // Format received vs distributed for chart
+  const recvDistChartData = recvDist.map(r => {
+    const fmt = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+    return {
+      startLabel: fmt(r.StartDate),
+      endLabel: fmt(r.EndDate),
+      Received: r.units_received,
+      Distributed: r.units_distributed,
+      net: r.units_received - r.units_distributed,
+    };
+  });
 
   if (loading) {
     return (
@@ -228,6 +257,80 @@ export default function AnalyticsPage() {
               <Area type="monotone" dataKey="GroceryStoreQuantity" name="Grocery" stroke={C.sage} strokeWidth={2} fillOpacity={1} fill="url(#gGS)" />
             </AreaChart>
           </ResponsiveContainer>
+        </ChartCard>
+
+        {/* Received vs Distributed by Checkpoint */}
+        <ChartCard
+          title="Received vs Distributed by Period"
+          span={2}
+          action={
+            <select
+              value={recvDistCategoryId}
+              onChange={(e) => { const v = e.target.value === '' ? '' : Number(e.target.value); setRecvDistCategoryId(v); reloadRecvDist(v); }}
+              className="text-xs font-bold border-none bg-forest/5 dark:bg-neutral-800 rounded-xl px-3 py-2 focus:ring-4 focus:ring-forest/5 text-forest dark:text-white transition-all max-w-[200px]"
+            >
+              <option value="">All Categories</option>
+              {categories.map(c => <option key={c.CategoryId} value={c.CategoryId}>{c.CategoryName}</option>)}
+            </select>
+          }
+        >
+          {recvDistChartData.length > 0 ? (
+            <>
+              {/* Summary row */}
+              <div className="flex items-center gap-6 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ background: C.forest }} />
+                  <span className="text-xs font-bold text-forest/60 dark:text-neutral-400">Received (invoices)</span>
+                  <span className="text-sm font-bold text-forest dark:text-white">
+                    {recvDistChartData.reduce((s, r) => s + r.Received, 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ background: C.brown }} />
+                  <span className="text-xs font-bold text-forest/60 dark:text-neutral-400">Distributed (transactions)</span>
+                  <span className="text-sm font-bold text-forest dark:text-white">
+                    {recvDistChartData.reduce((s, r) => s + r.Distributed, 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={recvDistChartData} barGap={4}>
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis
+                    dataKey="startLabel"
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    height={52}
+                    tick={(props: any) => {
+                      const { x, y, index } = props;
+                      const d = recvDistChartData[index];
+                      if (!d) return <g />;
+                      return (
+                        <g transform={`translate(${x},${y})`}>
+                          <text textAnchor="middle" fontSize={9} fontWeight={700} fill="#1B4332">
+                            <tspan x={0} dy={4}>{d.startLabel}</tspan>
+                            <tspan x={0} dy={12}>–</tspan>
+                            <tspan x={0} dy={12}>{d.endLabel}</tspan>
+                          </text>
+                        </g>
+                      );
+                    }}
+                  />
+                  <YAxis axisLine={false} tickLine={false} tick={AXIS_TICK} />
+                  <Tooltip
+                    contentStyle={TT_STYLE}
+                    formatter={(v: number, name: string) => [v.toLocaleString(), name]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, fontWeight: 700 }} />
+                  <Bar dataKey="Received" name="Received" fill={C.forest} radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="Distributed" name="Distributed" fill={C.brown} radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </>
+          ) : (
+            <p className="text-center py-10 text-forest/40 dark:text-neutral-500 font-medium">No checkpoint data available.</p>
+          )}
         </ChartCard>
 
         {/* Distribution Over Time */}

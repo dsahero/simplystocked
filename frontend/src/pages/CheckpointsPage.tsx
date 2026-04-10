@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ClipboardCheck, Plus, Calendar, Loader2, AlertCircle, X, CheckCircle2,
-  ChevronRight, ArrowRightLeft, Package, BarChart3,
+  ChevronRight, ChevronDown, ArrowRightLeft, Package, BarChart3, Filter,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -31,6 +31,8 @@ export default function CheckpointsPage() {
   // Transaction detail modal
   const [detailCheckpoint, setDetailCheckpoint] = useState<(ApiCheckpoint & { transactions: ApiTransaction[] }) | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [programFilter, setProgramFilter] = useState<'all' | 'open_market' | 'grocery'>('all');
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
   // Rollover tab state
   const [selectedCpId, setSelectedCpId] = useState<number | ''>('');
@@ -78,11 +80,43 @@ export default function CheckpointsPage() {
   const openDetail = async (cp: ApiCheckpoint) => {
     setDetailLoading(true);
     setDetailCheckpoint(null);
+    setProgramFilter('all');
+    setExpandedDates(new Set());
     try {
       const data = await getTransactionsByCheckpoint(cp.CheckPointId);
       setDetailCheckpoint(data);
+      // Auto-expand the first 3 dates
+      const dates = new Set<string>();
+      for (const tx of data.transactions) {
+        if (tx.TransactionDate && dates.size < 3) dates.add(tx.TransactionDate);
+      }
+      setExpandedDates(dates);
     } catch { setError('Failed to load transactions.'); }
     finally { setDetailLoading(false); }
+  };
+
+  // Group transactions by date, filtered by program
+  const groupedTransactions = useMemo(() => {
+    if (!detailCheckpoint) return [];
+    const filtered = programFilter === 'all'
+      ? detailCheckpoint.transactions
+      : detailCheckpoint.transactions.filter(tx => tx.Program === programFilter);
+
+    const grouped = new Map<string, ApiTransaction[]>();
+    for (const tx of filtered) {
+      const date = tx.TransactionDate ?? 'Unknown';
+      if (!grouped.has(date)) grouped.set(date, []);
+      grouped.get(date)!.push(tx);
+    }
+    return Array.from(grouped.entries()).sort(([a], [b]) => b.localeCompare(a));
+  }, [detailCheckpoint, programFilter]);
+
+  const toggleDate = (date: string) => {
+    setExpandedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date); else next.add(date);
+      return next;
+    });
   };
 
   // ── Load summary for rollover ───────────────────────────────────────
@@ -497,7 +531,7 @@ export default function CheckpointsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
+              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
             >
               {detailLoading ? (
                 <div className="flex items-center justify-center py-16">
@@ -505,7 +539,8 @@ export default function CheckpointsPage() {
                 </div>
               ) : detailCheckpoint && (
                 <>
-                  <div className="flex items-center justify-between mb-8">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-6">
                     <div>
                       <h2 className="text-3xl font-display font-bold text-forest dark:text-white">
                         Checkpoint #{detailCheckpoint.CheckPointId}
@@ -519,37 +554,136 @@ export default function CheckpointsPage() {
                     </button>
                   </div>
 
-                  {detailCheckpoint.transactions.length === 0 ? (
+                  {/* Program filter */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <Filter className="h-4 w-4 text-forest/30 shrink-0" />
+                    {[
+                      { value: 'all' as const, label: 'All Programs' },
+                      { value: 'open_market' as const, label: 'Open Market' },
+                      { value: 'grocery' as const, label: 'Grocery Store' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setProgramFilter(opt.value)}
+                        className={cn(
+                          'rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-95',
+                          programFilter === opt.value
+                            ? 'bg-brown text-white shadow-sm'
+                            : 'bg-forest/5 dark:bg-neutral-800 text-forest/50 dark:text-neutral-400 hover:bg-forest/10 dark:hover:bg-neutral-700'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-xs font-bold text-forest/40 dark:text-neutral-500">
+                      {groupedTransactions.reduce((s, [, txs]) => s + txs.length, 0)} transactions
+                    </span>
+                  </div>
+
+                  {/* Grouped by date */}
+                  {groupedTransactions.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-forest/5 mb-4">
                         <Package className="h-8 w-8 text-forest/20" />
                       </div>
-                      <p className="text-forest/40 dark:text-neutral-500 font-medium">No transactions recorded for this period.</p>
+                      <p className="text-forest/40 dark:text-neutral-500 font-medium">
+                        {detailCheckpoint.transactions.length === 0
+                          ? 'No transactions recorded for this period.'
+                          : 'No transactions match the selected program.'}
+                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {detailCheckpoint.transactions.map((tx) => (
-                        <div key={tx.TransactionId} className="rounded-[28px] border border-forest/5 dark:border-neutral-700 bg-cream/10 dark:bg-neutral-800/50 p-5 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-forest dark:text-white">Transaction #{tx.TransactionId}</span>
-                            <span className="text-sm font-bold text-brown">${tx.TotalAmount.toFixed(2)}</span>
-                          </div>
-                          {tx.items && tx.items.length > 0 && (
-                            <div className="space-y-1.5 pl-2 border-l-2 border-forest/10 dark:border-neutral-700 ml-1">
-                              {tx.items.map((item) => (
-                                <div key={item.TransactionItemId} className="flex items-center justify-between text-xs">
-                                  <span className="text-forest/60 dark:text-neutral-400 font-medium">
-                                    {item.ProductName} <span className="text-forest/30">({item.CategoryName})</span>
+                    <div className="space-y-3">
+                      {groupedTransactions.map(([date, txs]) => {
+                        const isExpanded = expandedDates.has(date);
+                        const dayTotal = txs.reduce((s, tx) => s + tx.TotalAmount, 0);
+                        const dayItems = txs.reduce((s, tx) => s + (tx.items?.reduce((a, i) => a + i.Quantity, 0) ?? 0), 0);
+                        const omCount = txs.filter(tx => tx.Program === 'open_market').length;
+                        const grCount = txs.filter(tx => tx.Program === 'grocery').length;
+
+                        return (
+                          <div key={date} className="rounded-[24px] border border-forest/5 dark:border-neutral-700 overflow-hidden">
+                            {/* Date header — always visible, clickable */}
+                            <button
+                              onClick={() => toggleDate(date)}
+                              className="w-full flex items-center justify-between px-6 py-4 bg-forest/[0.03] dark:bg-neutral-800/50 hover:bg-forest/5 dark:hover:bg-neutral-800 transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                {isExpanded
+                                  ? <ChevronDown className="h-4 w-4 text-forest/40 shrink-0" />
+                                  : <ChevronRight className="h-4 w-4 text-forest/40 shrink-0" />
+                                }
+                                <div>
+                                  <span className="text-sm font-bold text-forest dark:text-white">
+                                    {date !== 'Unknown' ? fmtDate(date) : 'Unknown Date'}
                                   </span>
-                                  <span className="font-bold text-forest/70 dark:text-neutral-300 shrink-0 ml-4">
-                                    {item.Quantity} × ${item.ProductPrice.toFixed(2)}
-                                  </span>
+                                  <div className="flex items-center gap-3 mt-0.5">
+                                    <span className="text-[10px] font-bold text-forest/40 dark:text-neutral-500">
+                                      {txs.length} transaction{txs.length !== 1 ? 's' : ''} · {dayItems} items
+                                    </span>
+                                    {omCount > 0 && (
+                                      <span className="inline-flex items-center rounded-md bg-forest/5 dark:bg-neutral-800 px-1.5 py-0.5 text-[9px] font-bold text-forest/50 dark:text-neutral-500">
+                                        OM {omCount}
+                                      </span>
+                                    )}
+                                    {grCount > 0 && (
+                                      <span className="inline-flex items-center rounded-md bg-sage/10 dark:bg-neutral-800 px-1.5 py-0.5 text-[9px] font-bold text-sage dark:text-neutral-500">
+                                        GS {grCount}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                              </div>
+                              <span className="text-sm font-bold text-brown shrink-0">${dayTotal.toFixed(2)}</span>
+                            </button>
+
+                            {/* Expanded transaction list */}
+                            {isExpanded && (
+                              <div className="divide-y divide-forest/5 dark:divide-neutral-700">
+                                {txs.map((tx) => (
+                                  <div key={tx.TransactionId} className="px-6 py-4 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-forest/60 dark:text-neutral-400">
+                                          #{tx.TransactionId}
+                                        </span>
+                                        {tx.Username && (
+                                          <span className="text-[10px] font-medium text-forest/40 dark:text-neutral-500">
+                                            by {tx.Username}
+                                          </span>
+                                        )}
+                                        <span className={cn(
+                                          'inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold',
+                                          tx.Program === 'grocery'
+                                            ? 'bg-sage/10 text-sage dark:bg-sage/5'
+                                            : 'bg-forest/5 text-forest/50 dark:bg-neutral-800 dark:text-neutral-500'
+                                        )}>
+                                          {tx.Program === 'grocery' ? 'Grocery' : 'Open Market'}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs font-bold text-forest dark:text-white">${tx.TotalAmount.toFixed(2)}</span>
+                                    </div>
+                                    {tx.items && tx.items.length > 0 && (
+                                      <div className="space-y-1 pl-3 border-l-2 border-forest/10 dark:border-neutral-700">
+                                        {tx.items.map((item) => (
+                                          <div key={item.TransactionItemId} className="flex items-center justify-between text-xs">
+                                            <span className="text-forest/60 dark:text-neutral-400 font-medium">
+                                              {item.ProductName} <span className="text-forest/30">({item.CategoryName})</span>
+                                            </span>
+                                            <span className="font-bold text-forest/70 dark:text-neutral-300 shrink-0 ml-4">
+                                              {item.Quantity} × ${item.ProductPrice.toFixed(2)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </>

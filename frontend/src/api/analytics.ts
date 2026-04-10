@@ -52,6 +52,23 @@ export function getStockTrends(productId?: number, days = 30) {
   return apiFetch<StockTrendPoint[]>(`/analytics/stock-trends?${params}`);
 }
 
+// ── Received vs Distributed per checkpoint ────────────────────────────
+export interface ReceivedVsDistributed {
+  CheckPointId: number;
+  StartDate: string;
+  EndDate: string;
+  units_received: number;
+  cost_received: number;
+  units_distributed: number;
+  value_distributed: number;
+}
+
+export function getReceivedVsDistributed(categoryId?: number) {
+  const params = new URLSearchParams();
+  if (categoryId) params.set('category_id', String(categoryId));
+  return apiFetch<ReceivedVsDistributed[]>(`/analytics/received-vs-distributed?${params}`);
+}
+
 // ── Distribution by category ──────────────────────────────────────────
 export interface CategoryDistribution {
   CategoryName: string;

@@ -18,6 +18,10 @@ def get_stock_trends(db: Session, product_id: Optional[int] = None, days: int = 
     return [dict(r) for r in analytics_queries.get_stock_trends(db, product_id, days)]
 
 
+def get_received_vs_distributed(db: Session, category_id: Optional[int] = None) -> list:
+    return [dict(r) for r in analytics_queries.get_received_vs_distributed(db, category_id)]
+
+
 def get_distribution_by_category(db: Session, start_date: Optional[str] = None,
                                  end_date: Optional[str] = None) -> list:
     return [dict(r) for r in analytics_queries.get_distribution_by_category(db, start_date, end_date)]

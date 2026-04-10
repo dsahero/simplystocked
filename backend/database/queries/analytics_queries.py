@@ -58,6 +58,47 @@ def get_stock_trends(db: Session, product_id: Optional[int] = None, days: int = 
     return result.mappings().all()
 
 
+def get_received_vs_distributed(db: Session, category_id: Optional[int] = None):
+    """Per-checkpoint: units received (invoices) vs units distributed (transactions), optionally by category."""
+    cat_filter_inv = "AND fp.CategoryId = :category_id" if category_id else ""
+    cat_filter_tx = "AND fp.CategoryId = :category_id" if category_id else ""
+    params: dict = {}
+    if category_id:
+        params["category_id"] = category_id
+
+    result = db.execute(text(f"""
+        SELECT cp.CheckPointId, cp.StartDate, cp.EndDate,
+               COALESCE(recv.units_received, 0) AS units_received,
+               COALESCE(recv.cost_received, 0) AS cost_received,
+               COALESCE(dist.units_distributed, 0) AS units_distributed,
+               COALESCE(dist.value_distributed, 0) AS value_distributed
+        FROM CheckPoint cp
+        LEFT JOIN (
+            SELECT cp2.CheckPointId,
+                   SUM(ii.Quantity) AS units_received,
+                   SUM(ii.Quantity * ii.UnitPrice) AS cost_received
+            FROM CheckPoint cp2
+            JOIN Invoice i ON i.Date BETWEEN cp2.StartDate AND cp2.EndDate
+            JOIN InvoiceItem ii ON i.InvoiceId = ii.InvoiceId
+            JOIN FoodProduct fp ON ii.FoodProductId = fp.FoodProductId
+            WHERE 1=1 {cat_filter_inv}
+            GROUP BY cp2.CheckPointId
+        ) recv ON cp.CheckPointId = recv.CheckPointId
+        LEFT JOIN (
+            SELECT t.CheckPointId,
+                   SUM(ti.Quantity) AS units_distributed,
+                   SUM(ti.Quantity * fp.ProductPrice) AS value_distributed
+            FROM `transaction` t
+            JOIN TransactionItem ti ON t.TransactionId = ti.TransactionId
+            JOIN FoodProduct fp ON ti.FoodProductId = fp.FoodProductId
+            WHERE 1=1 {cat_filter_tx}
+            GROUP BY t.CheckPointId
+        ) dist ON cp.CheckPointId = dist.CheckPointId
+        ORDER BY cp.StartDate
+    """), params)
+    return result.mappings().all()
+
+
 def get_distribution_by_category(db: Session, start_date: Optional[str] = None, end_date: Optional[str] = None):
     """Total distributed quantities grouped by category."""
     params: dict = {}

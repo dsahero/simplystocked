@@ -39,10 +39,13 @@ def create_checkpoint(db: Session, date: str, start_date: str, end_date: str) ->
 
 def get_transactions_by_checkpoint(db: Session, checkpoint_id: int):
     transactions = db.execute(text("""
-        SELECT t.TransactionId, t.TotalAmount, t.CheckPointId
-        FROM Transaction t
+        SELECT t.TransactionId, t.TotalAmount, t.CheckPointId,
+               t.TransactionDate, t.UserId, t.Program,
+               u.Username
+        FROM `transaction` t
+        LEFT JOIN Users u ON t.UserId = u.UserId
         WHERE t.CheckPointId = :checkpoint_id
-        ORDER BY t.TransactionId DESC
+        ORDER BY t.TransactionDate DESC, t.TransactionId DESC
     """), {"checkpoint_id": checkpoint_id})
 
     items = db.execute(text("""
@@ -52,7 +55,7 @@ def get_transactions_by_checkpoint(db: Session, checkpoint_id: int):
         FROM TransactionItem ti
         JOIN FoodProduct fp ON ti.FoodProductId = fp.FoodProductId
         JOIN Category c ON fp.CategoryId = c.CategoryId
-        JOIN Transaction t ON ti.TransactionId = t.TransactionId
+        JOIN `transaction` t ON ti.TransactionId = t.TransactionId
         WHERE t.CheckPointId = :checkpoint_id
         ORDER BY ti.TransactionId, fp.ProductName
     """), {"checkpoint_id": checkpoint_id})
