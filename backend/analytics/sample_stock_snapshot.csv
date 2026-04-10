@@ -1,0 +1,29 @@
+FoodProductId,ProductName,CategoryId,CategoryName,ProductPrice,total_stock,open_market_qty,grocery_store_qty,StockLevel,LastUpdated
+1,Apples,1,Produce,1.49,42,26,16,Medium,2026-04-10 18:00:44
+2,Bananas,1,Produce,0.59,56,21,35,Medium,2026-04-10 18:00:44
+3,Carrots,1,Produce,0.99,60,24,36,High,2026-04-10 18:00:44
+4,Potatoes,1,Produce,1.29,60,38,22,High,2026-04-10 18:00:44
+5,Spinach,1,Produce,2.49,24,13,11,Medium,2026-04-10 18:00:44
+6,Whole Milk,2,Dairy,3.99,84,24,60,High,2026-04-10 18:00:44
+7,Cheddar Cheese,2,Dairy,4.99,30,9,21,Medium,2026-04-10 18:00:44
+8,Greek Yogurt,2,Dairy,2.79,53,22,31,Medium,2026-04-10 18:00:44
+9,Butter,2,Dairy,3.49,33,9,24,Medium,2026-04-10 18:00:44
+10,White Bread,3,Bakery,2.49,60,41,19,High,2026-04-10 18:00:44
+11,Whole Wheat Bread,3,Bakery,2.99,86,35,51,High,2026-04-10 18:00:44
+12,Dinner Rolls,3,Bakery,3.49,32,15,17,Medium,2026-04-10 18:00:44
+13,Canned Tomatoes,4,Canned Goods,1.19,94,52,42,High,2026-04-10 18:00:44
+14,Black Beans,4,Canned Goods,0.99,38,15,23,Medium,2026-04-10 18:00:44
+15,Chicken Broth,4,Canned Goods,1.79,73,31,42,High,2026-04-10 18:00:44
+16,Corn,4,Canned Goods,0.89,87,35,52,High,2026-04-10 18:00:44
+17,Frozen Peas,5,Frozen Foods,2.29,75,23,52,High,2026-04-10 18:00:44
+18,Frozen Pizza,5,Frozen Foods,6.99,39,12,27,Medium,2026-04-10 18:00:44
+19,Ice Cream,5,Frozen Foods,4.49,60,26,34,High,2026-04-10 18:00:44
+20,Orange Juice,6,Beverages,3.29,86,37,49,High,2026-04-10 18:00:44
+21,Apple Juice,6,Beverages,2.99,45,28,17,Medium,2026-04-10 18:00:44
+22,Sparkling Water,6,Beverages,1.49,56,20,36,Medium,2026-04-10 18:00:44
+23,Granola Bars,7,Snacks,3.79,33,11,22,Medium,2026-04-10 18:00:44
+24,Crackers,7,Snacks,2.89,43,13,30,Medium,2026-04-10 18:00:44
+25,Peanut Butter,7,Snacks,4.29,46,21,25,Medium,2026-04-10 18:00:44
+26,Chicken Breast,8,Meat & Seafood,7.99,56,25,31,Medium,2026-04-10 18:00:44
+27,Ground Beef,8,Meat & Seafood,6.49,80,18,62,High,2026-04-10 18:00:44
+28,Salmon Fillet,8,Meat & Seafood,9.99,46,17,29,Medium,2026-04-10 18:00:44
