@@ -757,11 +757,15 @@ export default function UploadInvoicesPage() {
       let finalVendorId = vendorId;
       if (isNewVendor) {
         console.log(`[DEBUG - Frontend] handleCommit: Creating new vendor: ${reviewData.vendorName}`);
-        const newVendor = await createVendor(
-          reviewData.vendorName ?? 'New Vendor',
-          'info@vendor.com', // Placeholders
-          '', '', '', '', ''
-        );
+        const newVendor = await createVendor({
+          VendorName: reviewData.vendorName ?? 'New Vendor',
+          Email: '',
+          Phone: '',
+          HQAddress: '',
+          HQCity: '',
+          HQState: '',
+          HQZip: '',
+        });
         finalVendorId = newVendor.VendorId;
         // Update local list for future use
         setVendors(prev => [...prev, newVendor]);
