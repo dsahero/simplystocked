@@ -6,8 +6,10 @@ import { cn } from '../lib/utils';
 import { ProductSearchInput } from '../components/ui/ProductSearchInput';
 import { ApiProduct } from '../api/products';
 import { createInvoice, InvoiceLineItem } from '../api/invoices';
-import { getAllVendors, ApiVendor } from '../api/vendors';
+import { getAllVendors, ApiVendor, createVendor } from '../api/vendors';
 import { checkOcrHealth, ocrImageToInvoice, ocrTextToInvoice, OcrHealthResponse } from '../api/ocr';
+import { getAllProducts, createProduct } from '../api/products';
+import { getAllCategories, ApiCategory } from '../api/categories';
 
 type Program = 'open_market' | 'grocery';
 const PROGRAMS: { value: Program; label: string }[] = [
@@ -123,14 +125,19 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
               Match to Existing Product
             </label>
             <div className="flex items-center gap-2">
-              {matched && (
+            {matched && matched.FoodProductId !== -1 && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brown">
                   <CheckCircle className="h-3 w-3" /> Matched
                 </span>
               )}
+              {matched && matched.FoodProductId === -1 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500">
+                  <Plus className="h-3 w-3" /> New Product
+                </span>
+              )}
               {!matched && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-forest/30 dark:text-neutral-500">
-                  <AlertTriangle className="h-3 w-3" /> Unmatched — will be skipped
+                  <AlertTriangle className="h-3 w-3" /> Unmatched
                 </span>
               )}
               {onRemove && (
@@ -230,6 +237,29 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
             </div>
           </div>
         </div>
+
+        {/* New Product Specific: Category Selection */}
+        {matched?.FoodProductId === -1 && (
+          <div className="mt-4 space-y-1">
+            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">
+              Assign Category for New Product <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-900/5 px-3 py-2 text-sm font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
+              value={matched.CategoryId}
+              onChange={(e) => {
+                const catId = Number(e.target.value);
+                const catName = categories.find(c => c.CategoryId === catId)?.CategoryName ?? 'Unknown';
+                onSelect(idx, { ...matched, CategoryId: catId, CategoryName: catName });
+              }}
+            >
+              <option value="-1">Select a category...</option>
+              {categories.map(c => (
+                <option key={c.CategoryId} value={c.CategoryId}>{c.CategoryName}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Program selector */}
         <div className="mt-4">
@@ -430,9 +460,83 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
   );
 }
 
+// ── String Similarity Helper ────────────────────────────────────────────────
+function getSimilarity(s1: string, s2: string): number {
+  const v1 = s1.toLowerCase().trim();
+  const v2 = s2.toLowerCase().trim();
+  if (v1 === v2) return 1.0;
+  if (!v1 || !v2) return 0;
+  
+  // Very basic overlap matching
+  const words1 = v1.split(/\s+/);
+  const words2 = v2.split(/\s+/);
+  let matches = 0;
+  for (const w1 of words1) {
+    if (words2.some(w2 => w2 === w1 || w2.includes(w1) || w1.includes(w2))) {
+      matches++;
+    }
+  }
+  return matches / Math.max(words1.length, words2.length);
+}
+
+// ── Auto-matching Logic ───────────────────────────────────────────────────
+function autoMatchEntities(
+  invoiceData: InvoiceData,
+  currentVendors: ApiVendor[],
+  currentProducts: ApiProduct[],
+  setVendorId: (id: number | null) => void,
+  setIsNewVendor: (val: boolean) => void,
+  setMatchedProducts: (matched: { [idx: number]: ApiProduct | null }) => void
+) {
+  // 1. Match Vendor
+  console.log(`[DEBUG - AutoMatch] Matching Vendor: "${invoiceData.vendorName}" against ${currentVendors.length} vendors`);
+  if (invoiceData.vendorName) {
+    let bestMatch: ApiVendor | null = null;
+    let maxSim = 0;
+    for (const v of currentVendors) {
+      const sim = getSimilarity(invoiceData.vendorName, v.VendorName);
+      if (sim > maxSim) {
+        maxSim = sim;
+        bestMatch = v;
+      }
+    }
+    console.log(`[DEBUG - AutoMatch] Best Vendor Match: "${bestMatch?.VendorName}" (Score: ${maxSim.toFixed(2)})`);
+    if (bestMatch && maxSim > 0.6) {
+      setVendorId(bestMatch.VendorId);
+      setIsNewVendor(false);
+    } else {
+      setVendorId(null);
+      setIsNewVendor(true); 
+    }
+  }
+
+  // 2. Match Products
+  console.log(`[DEBUG - AutoMatch] Matching ${invoiceData.items.length} items against ${currentProducts.length} products`);
+  const newMatches: { [idx: number]: ApiProduct | null } = {};
+  invoiceData.items.forEach((item, idx) => {
+    let bestMatch: ApiProduct | null = null;
+    let maxSim = 0;
+    for (const p of currentProducts) {
+      const sim = getSimilarity(item.name, p.ProductName);
+      if (sim > maxSim) {
+        maxSim = sim;
+        bestMatch = p;
+      }
+    }
+    console.log(`[DEBUG - AutoMatch] Item [${idx}] "${item.name}" -> Best Match: "${bestMatch?.ProductName}" (Score: ${maxSim.toFixed(2)})`);
+    if (bestMatch && maxSim > 0.3) { // Lowered to 0.3 for greedy matching
+      newMatches[idx] = bestMatch;
+    } else {
+      newMatches[idx] = null;
+    }
+  });
+  setMatchedProducts(newMatches);
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function UploadInvoicesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrModel, setOcrModel] = useState('moondream:latest');
   const [processingPhase, setProcessingPhase] = useState<'reading' | 'parsing' | 'finalizing' | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const [rawText, setRawText] = useState('');
@@ -446,15 +550,24 @@ export default function UploadInvoicesPage() {
 
   const [matchedProducts, setMatchedProducts] = useState<{ [idx: number]: ApiProduct | null }>({});
   const [itemPrograms, setItemPrograms] = useState<{ [idx: number]: Program }>({});
-  const [vendors, setVendors] = useState<ApiVendor[]>([]);
   const [vendorId, setVendorId] = useState<number | null>(null);
+  const [isNewVendor, setIsNewVendor] = useState(false);
+  const [rawScanText, setRawScanText] = useState('');
+  const [rawApiResponse, setRawApiResponse] = useState<any>(null);
+
+  // Lists for auto-matching
+  const [vendors, setVendors] = useState<ApiVendor[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
 
   // ── Local Ollama status ───────────────────────────────────────────────────
   const [ollamaStatus, setOllamaStatus] = useState<OcrHealthResponse | null>(null);
-  const [ocrModel, setOcrModel] = useState('moondream:latest');
 
   useEffect(() => {
     getAllVendors().then(setVendors).catch(() => {});
+    getAllProducts().then(setProducts).catch(() => {});
+    getAllCategories().then(setCategories).catch(() => {});
+
     // Probe Ollama health on mount so we can show the status badge immediately
     checkOcrHealth().then(setOllamaStatus).catch(() =>
       setOllamaStatus({ available: false, models: [], error: 'Could not reach backend' })
@@ -510,14 +623,30 @@ export default function UploadInvoicesPage() {
         console.log(`[DEBUG - Frontend] handleFileUpload: Launching fetch command to API backend endpoint 'ocrImageToInvoice' with model '${ocrModel}'...`);
         const result = await ocrImageToInvoice(base64, file.type, ocrModel);
         console.log(`[DEBUG - Frontend] handleFileUpload: API fetch returned!`, result);
+        console.log(`[DEBUG - Frontend] handleFileUpload: Invoice Data:`, result.invoice_data);
+        setRawApiResponse(result.invoice_data);
+
+        setRawScanText(result.raw_text || ''); 
 
         // Phase 3: Finalizing UI
         setProcessingPhase('finalizing');
+        
+        console.log(`[DEBUG - Frontend] Launching Auto-Match... Vendors: ${vendors.length}, Products: ${products.length}`);
+        autoMatchEntities(
+          result.invoice_data,
+          vendors,
+          products,
+          setVendorId,
+          setIsNewVendor,
+          setMatchedProducts
+        );
+
         // Small delay so the user sees the 'Finalizing' state
         await new Promise(r => setTimeout(r, 800));
 
         setReviewData(result.invoice_data);
-        setIsManualEntry(true); // Go straight to manual entry form
+        // setRawScanText(''); // KEEP raw text for debugging as requested
+        setIsManualEntry(true); 
         setProcessingPhase(null);
         setIsProcessing(false);
         console.log(`[DEBUG - Frontend] handleFileUpload: Success path finished`);
@@ -547,7 +676,18 @@ export default function UploadInvoicesPage() {
     setError('');
     try {
       const result = await ocrTextToInvoice(rawText, ocrModel);
+      setRawScanText(rawText);
       setProcessingPhase('finalizing');
+
+      autoMatchEntities(
+        result.invoice_data,
+        vendors,
+        products,
+        setVendorId,
+        setIsNewVendor,
+        setMatchedProducts
+      );
+
       await new Promise(r => setTimeout(r, 600));
       setReviewData(result.invoice_data);
       setIsManualEntry(true);
@@ -610,37 +750,81 @@ export default function UploadInvoicesPage() {
     if (!reviewData) return;
     setIsCommitting(true);
     setCommitError('');
+    setCommitSuccess(false);
 
-    const matchedItems: InvoiceLineItem[] = reviewData.items
-      .map((item, idx) => {
-        const product = matchedProducts[idx];
-        if (!product) return null;
-        return {
-          product_id: product.FoodProductId,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          program: itemPrograms[idx] ?? 'open_market',
-        } as InvoiceLineItem;
-      })
-      .filter((x): x is InvoiceLineItem => x !== null);
-
-    if (matchedItems.length === 0) {
-      setCommitError('Match at least one item to an existing product before committing.');
-      setIsCommitting(false);
-      return;
-    }
-
-    const blank = { attn: '', address: '', city: '', state: '', zip_code: '', phone: '', email: '' };
     try {
+      // 1. Resolve Vendor ID (Create if new)
+      let finalVendorId = vendorId;
+      if (isNewVendor) {
+        console.log(`[DEBUG - Frontend] handleCommit: Creating new vendor: ${reviewData.vendorName}`);
+        const newVendor = await createVendor(
+          reviewData.vendorName ?? 'New Vendor',
+          'info@vendor.com', // Placeholders
+          '', '', '', '', ''
+        );
+        finalVendorId = newVendor.VendorId;
+        // Update local list for future use
+        setVendors(prev => [...prev, newVendor]);
+      }
+
+      if (!finalVendorId) {
+        throw new Error('Please select or create a vendor.');
+      }
+
+      // 2. Resolve Product IDs (Create if new)
+      const updatedMatchedProducts = { ...matchedProducts };
+      for (const [idxStr, product] of Object.entries(matchedProducts)) {
+        const idx = Number(idxStr);
+        if (product && product.FoodProductId === -1) {
+          console.log(`[DEBUG - Frontend] handleCommit: Creating new product: ${product.ProductName}`);
+          
+          if (product.CategoryId === -1) {
+            throw new Error(`Please assign a category for new product: ${product.ProductName}`);
+          }
+
+          const newProd = await createProduct(
+            product.ProductName,
+            product.ProductPrice || 0,
+            product.CategoryId,
+            0, 0
+          );
+          updatedMatchedProducts[idx] = newProd;
+          // Update local products list
+          setProducts(prev => [...prev, newProd]);
+        }
+      }
+      setMatchedProducts(updatedMatchedProducts);
+
+      // 3. Prepare Line Items
+      const matchedItems = reviewData.items
+        .map((item, idx) => {
+          const product = updatedMatchedProducts[idx];
+          if (!product || product.FoodProductId === -1) return null;
+          return {
+            product_id: product.FoodProductId,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            program: itemPrograms[idx] ?? 'open_market',
+          } as InvoiceLineItem;
+        })
+        .filter((x): x is InvoiceLineItem => x !== null);
+
+      if (matchedItems.length === 0) {
+        throw new Error('Match or create at least one item before committing.');
+      }
+
+      // 4. Create Invoice
+      const blank = { attn: '', address: '', city: '', state: '', zip_code: '', phone: '', email: '' };
       await createInvoice({
         date: reviewData.date,
         desc: reviewData.vendorName ?? 'Invoice',
-        vendor_id: vendorId ?? (vendors[0]?.VendorId ?? 1),
+        vendor_id: finalVendorId,
         from_details: blank,
         bill_to_details: blank,
         delivery_details: blank,
         items: matchedItems,
       });
+
       setCommitSuccess(true);
       setReviewData(null);
       setIsManualEntry(false);
@@ -648,8 +832,11 @@ export default function UploadInvoicesPage() {
       setMatchedProducts({});
       setItemPrograms({});
       setVendorId(null);
+      setIsNewVendor(false);
+      setRawScanText('');
       setTimeout(() => setCommitSuccess(false), 4000);
     } catch (err: any) {
+      console.error(`[DEBUG - Frontend] handleCommit: FAILED`, err);
       setCommitError(err.message ?? 'Failed to commit invoice.');
     } finally {
       setIsCommitting(false);
@@ -810,6 +997,19 @@ export default function UploadInvoicesPage() {
               <p className="text-2xl font-display font-bold text-forest dark:text-white">Processing…</p>
             )}
           </div>
+          
+          {/* Live Scan Preview */}
+          {rawScanText && (
+            <div className="w-full max-w-2xl mt-4 text-left animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-3 w-3 text-forest/40" />
+                <span className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Live Scan Data Output</span>
+              </div>
+              <div className="rounded-2xl border border-forest/5 bg-forest/[0.02] dark:bg-neutral-900/50 p-4 font-mono text-[10px] text-forest/60 dark:text-neutral-400 max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                {rawScanText}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -895,11 +1095,19 @@ export default function UploadInvoicesPage() {
             </div>
 
             {/* Vendor selector */}
-            {vendors.length > 0 && (
+            {!isNewVendor && vendors.length > 0 ? (
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">
-                  Link to Vendor Record
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">
+                    Link to Vendor Record
+                  </label>
+                  <button 
+                    onClick={() => setIsNewVendor(true)}
+                    className="text-[10px] font-bold text-brown hover:underline"
+                  >
+                    + Create as new vendor
+                  </button>
+                </div>
                 <select
                   value={vendorId ?? ''}
                   onChange={(e) => setVendorId(Number(e.target.value) || null)}
@@ -912,6 +1120,28 @@ export default function UploadInvoicesPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1">
+                    <Plus className="h-3 w-3" /> New Vendor Creation
+                  </label>
+                  <button 
+                    onClick={() => setIsNewVendor(false)}
+                    className="text-[10px] font-bold text-forest/40 hover:underline"
+                  >
+                    Use existing vendor instead
+                  </button>
+                </div>
+                <div className="rounded-2xl border-2 border-dashed border-amber-200 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-900/5 px-5 py-4">
+                  <p className="text-sm font-bold text-forest dark:text-white">
+                    {reviewData.vendorName || "Unknown Vendor"}
+                  </p>
+                  <p className="text-xs text-forest/40 dark:text-neutral-400 mt-1">
+                    This vendor will be created automatically in your database during commit.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -955,6 +1185,21 @@ export default function UploadInvoicesPage() {
                 <Plus className="h-4 w-4" />
                 Add Line Item
               </button>
+
+              {/* Diagnostic/Debug Section */}
+              {rawApiResponse && (
+                <div className="mt-12 pt-8 border-t border-forest/5 dark:border-neutral-800">
+                  <details className="group">
+                    <summary className="flex items-center gap-2 cursor-pointer list-none text-[10px] font-bold text-forest/30 uppercase tracking-widest hover:text-brown transition-colors">
+                      <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                      Developer: Raw AI Response (Diagnostics)
+                    </summary>
+                    <div className="mt-4 rounded-2xl bg-forest/[0.02] dark:bg-neutral-900/50 p-4 font-mono text-[10px] text-forest/40 dark:text-neutral-500 overflow-x-auto">
+                      <pre>{JSON.stringify(rawApiResponse, null, 2)}</pre>
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
 
             {/* Commit section */}

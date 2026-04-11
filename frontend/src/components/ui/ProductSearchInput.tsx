@@ -131,10 +131,37 @@ export function ProductSearchInput({
             </button>
           ))
         ) : !isLoading && query.length >= 2 ? (
-          <div className="px-6 py-5 text-center">
-            <p className="text-sm font-bold text-forest/40 dark:text-neutral-400">
-              No products found for "{query}"
-            </p>
+          <div className="flex flex-col">
+            <div className="px-6 py-4 text-center border-b border-forest/5 dark:border-neutral-800">
+              <p className="text-sm font-bold text-forest/40 dark:text-neutral-400">
+                No products found for "{query}"
+              </p>
+            </div>
+            <button
+              type="button"
+              onMouseDown={() => {
+                // Return a mock product object with ID -1 to signal 'New Product'
+                onSelect({
+                  FoodProductId: -1,
+                  ProductName: query,
+                  ProductPrice: 0,
+                  CategoryId: -1,
+                  CategoryName: 'New Product (Staged)',
+                  StockLevelId: null,
+                  StockLevel: 'Staged',
+                  Quantity: 0,
+                  OpenMarketQuantity: 0,
+                  GroceryStoreQuantity: 0,
+                  LastUpdated: null,
+                });
+                setQuery('');
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-brown/5 text-brown transition-colors text-left"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="text-sm font-bold">Add "{query}" as a new product</span>
+            </button>
           </div>
         ) : null}
       </AnimateDropdown>
