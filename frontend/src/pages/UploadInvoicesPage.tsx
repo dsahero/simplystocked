@@ -50,12 +50,15 @@ function blankItem(): InvoiceItem {
 // ── Image Downscaler ─────────────────────────────────────────────────────────
 const downscaleImageBase64 = (dataUrl: string, mimeType: string, maxDim: number): Promise<string> => {
   return new Promise((resolve, reject) => {
+    console.log(`[DEBUG - Frontend] downscaleImageBase64: Init called with mimeType=${mimeType}, maxDim=${maxDim}`);
     if (!mimeType.startsWith('image/')) {
+      console.log(`[DEBUG - Frontend] downscaleImageBase64: Not an image (${mimeType}), bypassing logic`);
       resolve(dataUrl.split(',')[1]);
       return;
     }
     const img = new Image();
     img.onload = () => {
+      console.log(`[DEBUG - Frontend] downscaleImageBase64: Image natively loaded (${img.width}x${img.height})`);
       let { width, height } = img;
       if (width > maxDim || height > maxDim) {
         if (width > height) {
@@ -71,13 +74,19 @@ const downscaleImageBase64 = (dataUrl: string, mimeType: string, maxDim: number)
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
+        console.warn(`[DEBUG - Frontend] downscaleImageBase64: Canvas ctx could not be established`);
         resolve(dataUrl.split(',')[1]);
         return;
       }
       ctx.drawImage(img, 0, 0, width, height);
+      console.log(`[DEBUG - Frontend] downscaleImageBase64: Canvas drawImage completed. Extracting DataUrl base64...`);
       resolve(canvas.toDataURL(mimeType, 0.85).split(',')[1]);
     };
-    img.onerror = reject;
+    img.onerror = (err) => {
+      console.error(`[DEBUG - Frontend] downscaleImageBase64: FAILED TO LOAD IMAGE`, err);
+      reject(err);
+    };
+    console.log(`[DEBUG - Frontend] downscaleImageBase64: Assigning src dataUrl...`);
     img.src = dataUrl;
   });
 };
@@ -424,7 +433,7 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function UploadInvoicesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingPhase, setProcessingPhase] = useState<'ocr' | 'parse' | 'gemini' | null>(null);
+  const [processingPhase, setProcessingPhase] = useState<'reading' | 'parsing' | 'finalizing' | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const [rawText, setRawText] = useState('');
   const [reviewData, setReviewData] = useState<InvoiceData | null>(null);
@@ -442,7 +451,7 @@ export default function UploadInvoicesPage() {
 
   // ── Local Ollama status ───────────────────────────────────────────────────
   const [ollamaStatus, setOllamaStatus] = useState<OcrHealthResponse | null>(null);
-  const [ocrModel, setOcrModel] = useState('qwen2.5vl:3b');
+  const [ocrModel, setOcrModel] = useState('moondream:latest');
 
   useEffect(() => {
     getAllVendors().then(setVendors).catch(() => {});
@@ -459,8 +468,13 @@ export default function UploadInvoicesPage() {
   }, [reviewData]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(`[DEBUG - Frontend] handleFileUpload: Button clicked`);
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log(`[DEBUG - Frontend] handleFileUpload: No file selected`);
+      return;
+    }
+    console.log(`[DEBUG - Frontend] handleFileUpload: Selected File Info -> Name: ${file.name}, Size: ${file.size}, Type: ${file.type}`);
 
     // Reset input so the same file can be re-uploaded if needed
     e.target.value = '';
@@ -471,48 +485,72 @@ export default function UploadInvoicesPage() {
 
     const reader = new FileReader();
     reader.onload = async () => {
+      console.log(`[DEBUG - Frontend] handleFileUpload: FileReader onload successfully triggered`);
       try {
         const dataUrl = reader.result as string;
         
-        // If image, resize to prevent Ollama OOM. If PDF, send raw base64.
+        // Phase 1: Image Processing
+        setProcessingPhase('reading');
+        
         let base64: string;
+        console.log(`[DEBUG - Frontend] handleFileUpload: Attempting data processing step...`);
         if (file.type.startsWith('image/')) {
+          console.log(`[DEBUG - Frontend] handleFileUpload: Resolving image downscaler pipeline...`);
           base64 = await downscaleImageBase64(dataUrl, file.type, 1280);
+          console.log(`[DEBUG - Frontend] handleFileUpload: Image downscaler resolved successfully`);
         } else {
+          console.log(`[DEBUG - Frontend] handleFileUpload: File is PDF/other, extracting raw base64 split...`);
           base64 = dataUrl.split(',')[1];
+          console.log(`[DEBUG - Frontend] handleFileUpload: Base64 string split success`);
         }
 
-        // Phase 1: image → raw text  (shown in loading UI)
-        // Phase 2: raw text → InvoiceData JSON
-        // Both happen inside the backend endpoint; we switch the label
-        // after a short delay so the user sees the two steps.
-        const parsePhaseTimer = setTimeout(() => setProcessingPhase('parse'), 3500);
+        // Phase 2: AI Parsing
+        setProcessingPhase('parsing');
 
+        console.log(`[DEBUG - Frontend] handleFileUpload: Launching fetch command to API backend endpoint 'ocrImageToInvoice' with model '${ocrModel}'...`);
         const result = await ocrImageToInvoice(base64, file.type, ocrModel);
-        clearTimeout(parsePhaseTimer);
+        console.log(`[DEBUG - Frontend] handleFileUpload: API fetch returned!`, result);
+
+        // Phase 3: Finalizing UI
+        setProcessingPhase('finalizing');
+        // Small delay so the user sees the 'Finalizing' state
+        await new Promise(r => setTimeout(r, 800));
 
         setReviewData(result.invoice_data);
+        setIsManualEntry(true); // Go straight to manual entry form
         setProcessingPhase(null);
         setIsProcessing(false);
+        console.log(`[DEBUG - Frontend] handleFileUpload: Success path finished`);
       } catch (err: any) {
+        console.error(`[DEBUG - Frontend] handleFileUpload: CAUGHT ERROR IN PIPELINE:`, err);
         setError(
           err.message ?? 'Local OCR failed. Make sure Ollama is running and the model is pulled.'
         );
-        setProcessingPhase(null);
         setIsProcessing(false);
+        setProcessingPhase(null);
       }
     };
+    reader.onerror = (err) => {
+        console.error(`[DEBUG - Frontend] handleFileUpload: FileReader encountered an error:`, err);
+        setError('Error reading local file.');
+        setIsProcessing(false);
+        setProcessingPhase(null);
+    }
+    console.log(`[DEBUG - Frontend] handleFileUpload: Triggering readAsDataURL`);
     reader.readAsDataURL(file);
   };
 
   const handleTextSubmit = async () => {
     if (!rawText.trim()) return;
     setIsProcessing(true);
-    setProcessingPhase('parse');
+    setProcessingPhase('parsing');
     setError('');
     try {
       const result = await ocrTextToInvoice(rawText, ocrModel);
+      setProcessingPhase('finalizing');
+      await new Promise(r => setTimeout(r, 600));
       setReviewData(result.invoice_data);
+      setIsManualEntry(true);
     } catch (err: any) {
       setError(
         err.message ?? 'Local parse failed. Make sure Ollama is running and the model is pulled.'
@@ -750,22 +788,22 @@ export default function UploadInvoicesPage() {
             <Loader2 className="h-16 w-16 animate-spin text-brown relative z-10" />
           </div>
           <div className="text-center">
-            {processingPhase === 'ocr' && (
+            {processingPhase === 'reading' && (
               <>
-                <p className="text-2xl font-display font-bold text-forest dark:text-white">📷 Reading image with local AI…</p>
-                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 1 of 2 — extracting raw text via Ollama ({ocrModel})</p>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">📷 Reading image locally…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 1 of 3 — Converting scan into pixels via Moondream</p>
               </>
             )}
-            {processingPhase === 'parse' && (
+            {processingPhase === 'parsing' && (
               <>
-                <p className="text-2xl font-display font-bold text-forest dark:text-white">🧠 Structuring invoice data…</p>
-                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 2 of 2 — parsing line items into inventory fields</p>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">🧠 Processing text with Llama…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 2 of 3 — Organizing data into invoice fields (Offline)</p>
               </>
             )}
-            {processingPhase === 'gemini' && (
+            {processingPhase === 'finalizing' && (
               <>
-                <p className="text-2xl font-display font-bold text-forest dark:text-white">AI is reading your invoice…</p>
-                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">This usually takes a few seconds.</p>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">✨ Finishing up…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 3 of 3 — Preparing your manual entry form</p>
               </>
             )}
             {!processingPhase && (
@@ -796,12 +834,10 @@ export default function UploadInvoicesPage() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-3xl font-display font-bold text-forest dark:text-white">
-                  {isManualEntry ? 'Manual Invoice Entry' : 'Review Invoice'}
+                  Invoice Entry
                 </h2>
                 <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-1">
-                  {isManualEntry
-                    ? 'Add each line item, match to a product, then commit.'
-                    : 'Verify AI-extracted data, match each item to a product, then commit.'}
+                  Add or edit line items, match them to products, and commit to inventory.
                 </p>
               </div>
               <button

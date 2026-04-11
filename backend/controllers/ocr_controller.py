@@ -28,23 +28,37 @@ def check_ollama_health() -> dict:
 
 # ── Step 1: image → raw text ──────────────────────────────────────────────────
 
-def image_to_raw_text(image_base64: str, mime_type: str = "image/jpeg", model: str = "qwen2.5vl:3b") -> str:
-    """
-    Feed the base64 image (or PDF rasterized to image) to a local vision-capable 
-    Ollama model and return the full verbatim text extracted from it.
-    """
-    image_bytes = base64.b64decode(image_base64)
+def image_to_raw_text(image_base64: str, mime_type: str = "image/jpeg", model: str = "moondream:latest") -> str:
+    print(f"\n[DEBUG - Backend] image_to_raw_text: Init called. MIME={mime_type}, Model={model}")
+    try:
+        print("[DEBUG - Backend] image_to_raw_text: Decoding base64 to bytes...")
+        image_bytes = base64.b64decode(image_base64)
+        print(f"[DEBUG - Backend] image_to_raw_text: Successfully decoded {len(image_bytes)} bytes")
+    except Exception as e:
+        print(f"[DEBUG - Backend] image_to_raw_text: b64decode FAILED: {str(e)}")
+        raise e
     
     if mime_type == "application/pdf":
+        print("[DEBUG - Backend] image_to_raw_text: PDF detected! Booting PyMuPDF (fitz)...")
         import fitz  # PyMuPDF
-        doc = fitz.open(stream=image_bytes, filetype="pdf")
-        page = doc.load_page(0)
-        # 150 DPI is usually sufficient for OCR reading
-        pix = page.get_pixmap(dpi=150)
-        image_bytes = pix.tobytes("png")
+        try:
+            doc = fitz.open(stream=image_bytes, filetype="pdf")
+            print(f"[DEBUG - Backend] image_to_raw_text: PDF Opened. Total Pages = {len(doc)}")
+            page = doc.load_page(0)
+            print("[DEBUG - Backend] image_to_raw_text: Parsing page 0 to Pixmap (DPI=150)...")
+            pix = page.get_pixmap(dpi=150)
+            print("[DEBUG - Backend] image_to_raw_text: Pixmap generated. Converting to PNG bytes...")
+            image_bytes = pix.tobytes("png")
+            print(f"[DEBUG - Backend] image_to_raw_text: PDF -> PNG Conversion Success. New byte size: {len(image_bytes)}")
+        except Exception as e:
+            print(f"[DEBUG - Backend] image_to_raw_text: PDF Parsing completely FAILED: {str(e)}")
+            raise e
 
     try:
-        print(f"DEBUG: Starting Ollama Step 1 (Image -> Text) with model {model}...")
+        print(f"[DEBUG - Backend] image_to_raw_text: Passing command to Ollama.chat(model='{model}')...")
+        print(f"[DEBUG - Backend] image_to_raw_text: WAIT HERE - If the console hangs here, Ollama is refusing to respond or taking too long to load the model into VRAM.")
+        import time
+        start_time = time.time()
         response = ollama.chat(
             model=model,
             messages=[
@@ -61,8 +75,11 @@ def image_to_raw_text(image_base64: str, mime_type: str = "image/jpeg", model: s
                 }
             ],
         )
-        print("DEBUG: Ollama Step 1 Completed.")
-        return response["message"]["content"]
+        elapsed = time.time() - start_time
+        print(f"[DEBUG - Backend] image_to_raw_text: Ollama.chat returned SUCCESSFULLY in {elapsed:.2f} seconds!")
+        content = response["message"]["content"]
+        print(f"[DEBUG - Backend] image_to_raw_text: Extracted content length = {len(content)} characters.")
+        return content
     except Exception as exc:
         print(f"DEBUG: Ollama Step 1 FAILED: {str(exc)}")
         raise HTTPException(
@@ -122,18 +139,20 @@ RAW INVOICE TEXT:
 """
 
 
-def raw_text_to_invoice_data(raw_text: str, model: str = "qwen2.5vl:3b") -> dict:
-    """
-    Send the OCR-extracted plain text to Ollama with a structured JSON prompt
-    and return a parsed InvoiceData-shaped dict.
-    """
+def raw_text_to_invoice_data(raw_text: str, model: str = "llama3.2") -> dict:
+    # We force llama3.2 for the text-parsing phase because it is significantly
+    # more reliable at following JSON schemas than vision-centric models.
+    parsing_model = "llama3.2"
+    
+    print(f"\n[DEBUG - Backend] raw_text_to_invoice_data: Init called. Model={parsing_model}, TextLength={len(raw_text)}")
     prompt = _PARSE_PROMPT + raw_text
 
     try:
-        print(f"DEBUG: Starting Ollama Step 2 (Text -> JSON) with model {model}...")
-        print(f"DEBUG: Raw text length: {len(raw_text)}")
+        print(f"[DEBUG - Backend] raw_text_to_invoice_data: Passing prompt to Ollama.chat(model='{parsing_model}')...")
+        import time
+        start_time = time.time()
         response = ollama.chat(
-            model=model,
+            model=parsing_model,
             messages=[
                 {
                     "role": "user",
@@ -142,8 +161,16 @@ def raw_text_to_invoice_data(raw_text: str, model: str = "qwen2.5vl:3b") -> dict
             ]
         )
         content = response["message"]["content"]
-        print("DEBUG: Ollama Step 2 Completed.")
-        print(f"DEBUG: Content: {content[:100]}...")
+        elapsed = time.time() - start_time
+        print(f"[DEBUG - Backend] raw_text_to_invoice_data: Ollama returned SUCCESS in {elapsed:.2f}s.")
+        
+        # Clean the output in case Llama wrapped it in markdown code fences
+        content = content.strip()
+        if content.startswith("```"):
+            # Strip ```json ... ``` or just ``` ... ```
+            content = re.sub(r'^```(?:json)?\n?|\n?```$', '', content, flags=re.MULTILINE)
+        
+        print(f"[DEBUG - Backend] raw_text_to_invoice_data: Cleaned Content Snippet: {content[:100]}...")
     except Exception as exc:
         print(f"DEBUG: Ollama Step 2 FAILED: {str(exc)}")
         raise HTTPException(
@@ -203,7 +230,7 @@ def raw_text_to_invoice_data(raw_text: str, model: str = "qwen2.5vl:3b") -> dict
 def image_to_invoice_data(
     image_base64: str,
     mime_type: str = "image/jpeg",
-    model: str = "qwen2.5vl:3b",
+    model: str = "moondream:latest",
 ) -> dict:
     """
     Full two-shot pipeline:

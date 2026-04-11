@@ -8,12 +8,12 @@ router = APIRouter(prefix="/ocr", tags=["OCR"])
 class ImageOcrRequest(BaseModel):
     image_base64: str
     mime_type: str = "image/jpeg"
-    model: str = "qwen2.5vl:3b"
+    model: str = "moondream:latest"
 
 
 class TextOcrRequest(BaseModel):
     raw_text: str
-    model: str = "qwen2.5vl:3b"
+    model: str = "moondream:latest"
 
 
 @router.get("/health")
