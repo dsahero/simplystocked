@@ -10,7 +10,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 if not DB_PASSWORD:
     raise RuntimeError("DB_PASSWORD environment variable is not set")
 
-DATABASE_URL = f"mysql+pymysql://root:{DB_PASSWORD}@localhost:3306/simplystocked"
+DATABASE_URL = f"mysql+pymysql://root:{DB_PASSWORD}@localhost:3306/SimplyStocked"
 
 engine = create_engine(
     DATABASE_URL,
