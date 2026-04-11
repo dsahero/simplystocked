@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, Image as ImageIcon, Loader2, CheckCircle, AlertCircle, X, HelpCircle, AlertTriangle, ChevronDown, ChevronUp, ClipboardList, Plus, Trash2 } from 'lucide-react';
+import { FileText, Image as ImageIcon, Loader2, CheckCircle, AlertCircle, X, HelpCircle, AlertTriangle, ChevronDown, ChevronUp, ClipboardList, Plus, Trash2, Cpu, Wifi, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { extractInvoiceData } from '../services/geminiService';
 import { InvoiceData, InvoiceItem } from '../types';
 import { cn } from '../lib/utils';
 import { ProductSearchInput } from '../components/ui/ProductSearchInput';
 import { ApiProduct } from '../api/products';
 import { createInvoice, InvoiceLineItem } from '../api/invoices';
 import { getAllVendors, ApiVendor } from '../api/vendors';
+import { checkOcrHealth, ocrImageToInvoice, ocrTextToInvoice, OcrHealthResponse } from '../api/ocr';
 
 type Program = 'open_market' | 'grocery';
 const PROGRAMS: { value: Program; label: string }[] = [
@@ -46,6 +46,41 @@ function StorageBadge({ type }: { type?: string }) {
 function blankItem(): InvoiceItem {
   return { name: '', unit: 'Case', quantity: 1, unitPrice: 0, cost: 0, isPerishable: false };
 }
+
+// ── Image Downscaler ─────────────────────────────────────────────────────────
+const downscaleImageBase64 = (dataUrl: string, mimeType: string, maxDim: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!mimeType.startsWith('image/')) {
+      resolve(dataUrl.split(',')[1]);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl.split(',')[1]);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL(mimeType, 0.85).split(',')[1]);
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+};
 
 // ── Item card ────────────────────────────────────────────────────────────────
 interface ItemCardProps {
@@ -389,6 +424,7 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function UploadInvoicesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingPhase, setProcessingPhase] = useState<'ocr' | 'parse' | 'gemini' | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const [rawText, setRawText] = useState('');
   const [reviewData, setReviewData] = useState<InvoiceData | null>(null);
@@ -404,8 +440,16 @@ export default function UploadInvoicesPage() {
   const [vendors, setVendors] = useState<ApiVendor[]>([]);
   const [vendorId, setVendorId] = useState<number | null>(null);
 
+  // ── Local Ollama status ───────────────────────────────────────────────────
+  const [ollamaStatus, setOllamaStatus] = useState<OcrHealthResponse | null>(null);
+  const [ocrModel, setOcrModel] = useState('qwen2.5vl:3b');
+
   useEffect(() => {
     getAllVendors().then(setVendors).catch(() => {});
+    // Probe Ollama health on mount so we can show the status badge immediately
+    checkOcrHealth().then(setOllamaStatus).catch(() =>
+      setOllamaStatus({ available: false, models: [], error: 'Could not reach backend' })
+    );
   }, []);
 
   useEffect(() => {
@@ -417,17 +461,38 @@ export default function UploadInvoicesPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Reset input so the same file can be re-uploaded if needed
+    e.target.value = '';
+
     setIsProcessing(true);
+    setProcessingPhase('ocr');
     setError('');
+
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const base64 = (reader.result as string).split(',')[1];
-        const data = await extractInvoiceData({ data: base64, mimeType: file.type });
-        setReviewData(data);
+        const dataUrl = reader.result as string;
+        // Resize large images to ~1280px max to prevent Ollama VRAM/Context OOM 
+        const base64 = await downscaleImageBase64(dataUrl, file.type, 1280);
+
+        // Phase 1: image → raw text  (shown in loading UI)
+        // Phase 2: raw text → InvoiceData JSON
+        // Both happen inside the backend endpoint; we switch the label
+        // after a short delay so the user sees the two steps.
+        const parsePhaseTimer = setTimeout(() => setProcessingPhase('parse'), 3500);
+
+        const result = await ocrImageToInvoice(base64, file.type, ocrModel);
+        clearTimeout(parsePhaseTimer);
+
+        setReviewData(result.invoice_data);
+        setProcessingPhase(null);
         setIsProcessing(false);
-      } catch {
-        setError('Failed to process file. Please try again or paste text.');
+      } catch (err: any) {
+        setError(
+          err.message ?? 'Local OCR failed. Make sure Ollama is running and the model is pulled.'
+        );
+        setProcessingPhase(null);
         setIsProcessing(false);
       }
     };
@@ -437,13 +502,17 @@ export default function UploadInvoicesPage() {
   const handleTextSubmit = async () => {
     if (!rawText.trim()) return;
     setIsProcessing(true);
+    setProcessingPhase('parse');
     setError('');
     try {
-      const data = await extractInvoiceData(rawText);
-      setReviewData(data);
-    } catch {
-      setError('Failed to parse text. Please check the format and try again.');
+      const result = await ocrTextToInvoice(rawText, ocrModel);
+      setReviewData(result.invoice_data);
+    } catch (err: any) {
+      setError(
+        err.message ?? 'Local parse failed. Make sure Ollama is running and the model is pulled.'
+      );
     } finally {
+      setProcessingPhase(null);
       setIsProcessing(false);
     }
   };
@@ -561,13 +630,56 @@ export default function UploadInvoicesPage() {
       )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Image / PDF Upload */}
-        <div className="rounded-[40px] border-2 border-dashed border-forest/10 bg-white dark:bg-neutral-900 p-10 text-center hover:border-brown transition-all group cursor-pointer shadow-sm">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-forest/5 text-forest group-hover:scale-110 group-hover:bg-forest group-hover:text-white transition-all duration-500">
-            <ImageIcon className="h-10 w-10" />
+        {/* Image / PDF Upload — local Ollama OCR */}
+        <div className="rounded-[40px] border-2 border-dashed border-forest/10 bg-white dark:bg-neutral-900 p-8 text-center hover:border-brown transition-all group cursor-pointer shadow-sm flex flex-col">
+          {/* Ollama status badge */}
+          <div className="flex justify-center mb-3">
+            {ollamaStatus === null ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold bg-forest/5 text-forest/40">
+                <Loader2 className="h-3 w-3 animate-spin" /> Checking Ollama…
+              </span>
+            ) : ollamaStatus.available ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                <Wifi className="h-3 w-3" /> Ollama online
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" title={ollamaStatus.error}>
+                <WifiOff className="h-3 w-3" /> Ollama offline
+              </span>
+            )}
           </div>
-          <h3 className="mt-6 text-xl font-display font-bold text-forest dark:text-white">Upload Invoice</h3>
-          <p className="mt-2 text-sm text-forest/40 dark:text-neutral-400 font-medium leading-relaxed">Upload a photo, scan, or PDF of your invoice (JPG, PNG, PDF).</p>
+
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-forest/5 text-forest group-hover:scale-110 group-hover:bg-forest group-hover:text-white transition-all duration-500">
+            <ImageIcon className="h-8 w-8" />
+          </div>
+          <h3 className="mt-4 text-xl font-display font-bold text-forest dark:text-white">Upload Invoice</h3>
+          <p className="mt-1.5 text-sm text-forest/40 dark:text-neutral-400 font-medium leading-relaxed">
+            Photo, scan, or PDF processed 100% on-device via local AI. No cloud.
+          </p>
+
+          {/* Model selector */}
+          <div className="mt-4 text-left">
+            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+              <Cpu className="h-3 w-3" /> Ollama Model
+            </label>
+            <select
+              value={ocrModel}
+              onChange={(e) => setOcrModel(e.target.value)}
+              className="w-full rounded-xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-3 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
+            >
+              {/* Always show the default; also show any discovered models */}
+              {['qwen2.5vl:3b', 'llava:13b', 'moondream:latest', 'llama3.2-vision']
+                .concat(
+                  (ollamaStatus?.models ?? []).filter(
+                    (m) => !['qwen2.5vl:3b', 'llava:13b', 'moondream:latest', 'llama3.2-vision'].includes(m)
+                  )
+                )
+                .map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+            </select>
+          </div>
+
           <input
             type="file"
             ref={fileInputRef}
@@ -578,7 +690,7 @@ export default function UploadInvoicesPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
-            className="mt-8 w-full rounded-2xl bg-forest dark:bg-white px-6 py-4 text-sm font-bold text-white dark:text-neutral-900 hover:bg-forest-dark dark:hover:bg-neutral-100 shadow-xl shadow-forest/10 transition-all active:scale-95 disabled:opacity-50"
+            className="mt-5 w-full rounded-2xl bg-forest dark:bg-white px-6 py-4 text-sm font-bold text-white dark:text-neutral-900 hover:bg-forest-dark dark:hover:bg-neutral-100 shadow-xl shadow-forest/10 transition-all active:scale-95 disabled:opacity-50"
           >
             Select File
           </button>
@@ -632,8 +744,27 @@ export default function UploadInvoicesPage() {
             <Loader2 className="h-16 w-16 animate-spin text-brown relative z-10" />
           </div>
           <div className="text-center">
-            <p className="text-2xl font-display font-bold text-forest dark:text-white">AI is reading your invoice…</p>
-            <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">This usually takes a few seconds.</p>
+            {processingPhase === 'ocr' && (
+              <>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">📷 Reading image with local AI…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 1 of 2 — extracting raw text via Ollama ({ocrModel})</p>
+              </>
+            )}
+            {processingPhase === 'parse' && (
+              <>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">🧠 Structuring invoice data…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">Step 2 of 2 — parsing line items into inventory fields</p>
+              </>
+            )}
+            {processingPhase === 'gemini' && (
+              <>
+                <p className="text-2xl font-display font-bold text-forest dark:text-white">AI is reading your invoice…</p>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium mt-2">This usually takes a few seconds.</p>
+              </>
+            )}
+            {!processingPhase && (
+              <p className="text-2xl font-display font-bold text-forest dark:text-white">Processing…</p>
+            )}
           </div>
         </div>
       )}
