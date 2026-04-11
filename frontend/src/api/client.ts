@@ -10,7 +10,18 @@ export async function apiFetch<T>(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? `Request failed: ${res.status}`);
+    let msg = `Request failed (${res.status})`;
+    
+    if (typeof err.detail === 'string') {
+      msg = err.detail;
+    } else if (Array.isArray(err.detail)) {
+      // Handle Pydantic validation error arrays
+      msg = err.detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
+    } else if (err.detail) {
+      msg = JSON.stringify(err.detail);
+    }
+    
+    throw new Error(msg);
   }
   // 204 No Content — return empty object
   if (res.status === 204) return {} as T;

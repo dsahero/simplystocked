@@ -4,18 +4,18 @@ from sqlalchemy import text
 
 def get_all_invoices(db: Session):
     result = db.execute(text("""
-        SELECT i.InvoiceId, i.Date, i.Desc, i.TotalPrice,
+        SELECT i.InvoiceId, i.`Date`, i.`Desc`, i.TotalPrice,
                v.VendorId, v.VendorName, v.Email AS VendorEmail, v.HQCity AS VendorCity
         FROM Invoice i
         JOIN Vendor v ON i.VendorId = v.VendorId
-        ORDER BY i.Date DESC
+        ORDER BY i.`Date` DESC
     """))
     return result.mappings().all()
 
 
 def get_invoice_by_id(db: Session, invoice_id: int):
     invoice = db.execute(text("""
-        SELECT i.InvoiceId, i.Date, i.Desc, i.TotalPrice, i.VendorId,
+        SELECT i.InvoiceId, i.`Date`, i.`Desc`, i.TotalPrice, i.VendorId,
                v.VendorName, v.Email AS VendorEmail, v.Phone AS VendorPhone,
                v.HQAddress, v.HQCity, v.HQState, v.HQZip,
                frm.Attn AS FromAttn, frm.Address AS FromAddress,
@@ -51,10 +51,10 @@ def get_invoice_by_id(db: Session, invoice_id: int):
 
 def get_invoices_by_vendor(db: Session, vendor_id: int):
     result = db.execute(text("""
-        SELECT i.InvoiceId, i.Date, i.Desc, i.TotalPrice
+        SELECT i.InvoiceId, i.`Date`, i.`Desc`, i.TotalPrice
         FROM Invoice i
         WHERE i.VendorId = :vendor_id
-        ORDER BY i.Date DESC
+        ORDER BY i.`Date` DESC
     """), {"vendor_id": vendor_id})
     return result.mappings().all()
 
@@ -73,7 +73,7 @@ def create_invoice_address(db: Session, attn: str, address: str, city: str,
 def create_invoice(db: Session, date: str, desc: str, total_price: float,
                    vendor_id: int, from_id: int, bill_to_id: int, delivery_id: int) -> int:
     result = db.execute(text("""
-        INSERT INTO Invoice (Date, Desc, TotalPrice, VendorId, InvoiceFromId, InvoiceBillToId, InvoiceDeliveryId)
+        INSERT INTO Invoice (`Date`, `Desc`, TotalPrice, VendorId, InvoiceFromId, InvoiceBillToId, InvoiceDeliveryId)
         VALUES (:date, :desc, :total_price, :vendor_id, :from_id, :bill_to_id, :delivery_id)
     """), {"date": date, "desc": desc, "total_price": total_price,
            "vendor_id": vendor_id, "from_id": from_id,

@@ -8,12 +8,13 @@ router = APIRouter(prefix="/ocr", tags=["OCR"])
 class ImageOcrRequest(BaseModel):
     image_base64: str
     mime_type: str = "image/jpeg"
-    model: str = "moondream:latest"
+    vision_model: str = "qwen2.5vl:3b"
+    parsing_model: str = "llama3.2"
 
 
 class TextOcrRequest(BaseModel):
     raw_text: str
-    model: str = "moondream:latest"
+    parsing_model: str = "llama3.2"
 
 
 @router.get("/health")
@@ -28,15 +29,12 @@ def image_to_invoice(body: ImageOcrRequest):
     Two-shot local OCR pipeline:
     1. Vision LLM extracts raw text from the image
     2. LLM parses raw text into structured InvoiceData JSON
-
-    Returns:
-      invoice_data  — InvoiceData-shaped dict ready for the review screen
-      raw_text      — intermediate OCR output for debugging
     """
     return ocr_controller.image_to_invoice_data(
         image_base64=body.image_base64,
         mime_type=body.mime_type,
-        model=body.model,
+        vision_model=body.vision_model,
+        parsing_model=body.parsing_model,
     )
 
 
@@ -44,14 +42,10 @@ def image_to_invoice(body: ImageOcrRequest):
 def text_to_invoice(body: TextOcrRequest):
     """
     Parse raw invoice text into structured InvoiceData JSON using a local
-    Ollama model. Fully offline — no cloud API calls.
-
-    Returns:
-      invoice_data  — InvoiceData-shaped dict ready for the review screen
+    Ollama model.
     """
     invoice_data = ocr_controller.raw_text_to_invoice_data(
         raw_text=body.raw_text,
-        model=body.model,
+        model=body.parsing_model,
     )
     return {"invoice_data": invoice_data}
-

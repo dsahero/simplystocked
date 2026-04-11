@@ -27,30 +27,29 @@ export function checkOcrHealth(): Promise<OcrHealthResponse> {
 /**
  * Full two-shot local OCR pipeline:
  *   base64 image → raw text (vision LLM) → InvoiceData JSON (text LLM)
- * All inference happens on-device via Ollama — no cloud calls.
  */
 export async function ocrImageToInvoice(
   image_base64: string,
   mime_type: string,
-  model = 'qwen2.5vl:3b'
+  vision_model = 'qwen2.5vl:3b',
+  parsing_model = 'llama3.2'
 ): Promise<ImageToInvoiceResponse> {
   return apiFetch<ImageToInvoiceResponse>('/ocr/image-to-invoice', {
     method: 'POST',
-    body: JSON.stringify({ image_base64, mime_type, model }),
+    body: JSON.stringify({ image_base64, mime_type, vision_model, parsing_model }),
   });
 }
 
 /**
  * Parse raw invoice text into InvoiceData JSON using a local Ollama model.
- * 100% offline — replaces the Gemini text-paste path entirely.
  */
 export async function ocrTextToInvoice(
   raw_text: string,
-  model = 'qwen2.5vl:3b'
+  parsing_model = 'llama3.2'
 ): Promise<TextToInvoiceResponse> {
   return apiFetch<TextToInvoiceResponse>('/ocr/text-to-invoice', {
     method: 'POST',
-    body: JSON.stringify({ raw_text, model }),
+    body: JSON.stringify({ raw_text, parsing_model }),
   });
 }
 

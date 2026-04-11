@@ -524,10 +524,22 @@ function autoMatchEntities(
       }
     }
     console.log(`[DEBUG - AutoMatch] Item [${idx}] "${item.name}" -> Best Match: "${bestMatch?.ProductName}" (Score: ${maxSim.toFixed(2)})`);
-    if (bestMatch && maxSim > 0.3) { // Lowered to 0.3 for greedy matching
+    if (bestMatch && maxSim > 0.3) { // Greedy matching
       newMatches[idx] = bestMatch;
     } else {
-      newMatches[idx] = null;
+      newMatches[idx] = {
+        FoodProductId: -1,
+        ProductName: item.name,
+        ProductPrice: item.unitPrice || 0,
+        CategoryId: -1,
+        CategoryName: 'New Product',
+        StockLevelId: null,
+        StockLevel: null,
+        Quantity: 0,
+        OpenMarketQuantity: 0,
+        GroceryStoreQuantity: 0,
+        LastUpdated: null
+      };
     }
   });
   setMatchedProducts(newMatches);
@@ -536,7 +548,8 @@ function autoMatchEntities(
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function UploadInvoicesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [ocrModel, setOcrModel] = useState('moondream:latest');
+  const [visionModel, setVisionModel] = useState('qwen2.5vl:3b');
+  const [parsingModel, setParsingModel] = useState('llama3.2');
   const [processingPhase, setProcessingPhase] = useState<'reading' | 'parsing' | 'finalizing' | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const [rawText, setRawText] = useState('');
@@ -757,11 +770,15 @@ export default function UploadInvoicesPage() {
       let finalVendorId = vendorId;
       if (isNewVendor) {
         console.log(`[DEBUG - Frontend] handleCommit: Creating new vendor: ${reviewData.vendorName}`);
-        const newVendor = await createVendor(
-          reviewData.vendorName ?? 'New Vendor',
-          'info@vendor.com', // Placeholders
-          '', '', '', '', ''
-        );
+        const newVendor = await createVendor({
+          VendorName: reviewData.vendorName ?? 'New Vendor',
+          Email: 'info@vendor.com', // Placeholder
+          Phone: '',
+          HQAddress: '',
+          HQCity: '',
+          HQState: '',
+          HQZip: ''
+        });
         finalVendorId = newVendor.VendorId;
         // Update local list for future use
         setVendors(prev => [...prev, newVendor]);
@@ -888,27 +905,49 @@ export default function UploadInvoicesPage() {
             Photo, scan, or PDF processed 100% on-device via local AI. No cloud.
           </p>
 
-          {/* Model selector */}
-          <div className="mt-4 text-left">
-            <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
-              <Cpu className="h-3 w-3" /> Ollama Model
-            </label>
-            <select
-              value={ocrModel}
-              onChange={(e) => setOcrModel(e.target.value)}
-              className="w-full rounded-xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-3 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all"
-            >
-              {/* Always show the default; also show any discovered models */}
-              {['qwen2.5vl:3b', 'llava:13b', 'moondream:latest', 'llama3.2-vision']
-                .concat(
-                  (ollamaStatus?.models ?? []).filter(
-                    (m) => !['qwen2.5vl:3b', 'llava:13b', 'moondream:latest', 'llama3.2-vision'].includes(m)
+          {/* Dual-Model selectors */}
+          <div className="mt-6 flex flex-col gap-4 text-left">
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+                <Cpu className="h-3 w-3" /> The Eye (Vision)
+              </label>
+              <select
+                value={visionModel}
+                onChange={(e) => setVisionModel(e.target.value)}
+                className="w-full rounded-xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-3 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all shadow-sm"
+              >
+                {['qwen2.5vl:3b', 'llama3.2-vision', 'moondream:latest', 'llava:13b']
+                  .concat(
+                    (ollamaStatus?.models ?? []).filter(
+                      (m) => m.includes('vision') || m.includes('vl') || m.includes('moondream') || m.includes('llava')
+                    ).filter(m => !['qwen2.5vl:3b', 'llama3.2-vision', 'moondream:latest', 'llava:13b'].includes(m))
                   )
-                )
-                .map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-            </select>
+                  .map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-forest/40 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+                <Fingerprint className="h-3 w-3" /> The Brain (Parser)
+              </label>
+              <select
+                value={parsingModel}
+                onChange={(e) => setParsingModel(e.target.value)}
+                className="w-full rounded-xl border border-forest/10 dark:border-neutral-700 bg-cream/20 dark:bg-neutral-900 px-3 py-2 text-xs font-bold focus:border-brown focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all shadow-sm"
+              >
+                {['llama3.2', 'llama3.1', 'mistral', 'phi3']
+                  .concat(
+                    (ollamaStatus?.models ?? []).filter(
+                      (m) => !m.includes('vision') && !m.includes('vl')
+                    ).filter(m => !['llama3.2', 'llama3.1', 'mistral', 'phi3'].includes(m))
+                  )
+                  .map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           <input
@@ -1019,6 +1058,19 @@ export default function UploadInvoicesPage() {
             exit={{ opacity: 0, y: 16 }}
             className="rounded-[48px] border border-forest/5 bg-white dark:bg-neutral-900 shadow-2xl p-8 space-y-8"
           >
+            {/* Raw Scan Output (Diagnostic Context) */}
+            {rawScanText && (
+              <div className="w-full pb-8 border-b border-forest/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-3 w-3 text-forest/40" />
+                  <span className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Raw OCR Transcription (Diagnostics)</span>
+                </div>
+                <div className="rounded-2xl border border-forest/5 bg-forest/[0.02] dark:bg-neutral-900/50 p-4 font-mono text-[10px] text-forest/60 dark:text-neutral-400 max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                  {rawScanText}
+                </div>
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
@@ -1227,7 +1279,6 @@ export default function UploadInvoicesPage() {
                 )}
               </button>
             </div>
-
             {/* Diagnostic Data (Always visible during review) */}
             {rawScanText && (
               <div className="w-full pt-8 mt-8 border-t border-forest/5">
