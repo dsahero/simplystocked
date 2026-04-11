@@ -473,8 +473,14 @@ export default function UploadInvoicesPage() {
     reader.onload = async () => {
       try {
         const dataUrl = reader.result as string;
-        // Resize large images to ~1280px max to prevent Ollama VRAM/Context OOM 
-        const base64 = await downscaleImageBase64(dataUrl, file.type, 1280);
+        
+        // If image, resize to prevent Ollama OOM. If PDF, send raw base64.
+        let base64: string;
+        if (file.type.startsWith('image/')) {
+          base64 = await downscaleImageBase64(dataUrl, file.type, 1280);
+        } else {
+          base64 = dataUrl.split(',')[1];
+        }
 
         // Phase 1: image → raw text  (shown in loading UI)
         // Phase 2: raw text → InvoiceData JSON
