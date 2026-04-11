@@ -6,16 +6,26 @@ import {
 import { Loader2, TrendingUp, Package, AlertTriangle, DollarSign, Users, Trash2, Truck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
+<<<<<<< HEAD
   getDashboardStats, getStockTrends, getReceivedVsDistributed,
   getDistributionByCategory,
   getDistributionOverTime, getWasteSummary, getTopProducts,
   getVendorSpending, getProgramComparison, getCheckpointTrends,
   DashboardStats, StockTrendPoint, ReceivedVsDistributed, CategoryDistribution,
+=======
+  getDashboardStats, getStockTrends, getDistributionByCategory,
+  getDistributionOverTime, getWasteSummary, getTopProducts,
+  getVendorSpending, getProgramComparison, getCheckpointTrends,
+  DashboardStats, StockTrendPoint, CategoryDistribution,
+>>>>>>> invoice
   DistributionPeriod, WasteSummary, TopProduct,
   VendorSpending, ProgramComparison, CheckpointStats,
 } from '../api/analytics';
 import { getAllProducts, ApiProduct } from '../api/products';
+<<<<<<< HEAD
 import { getAllCategories, ApiCategory } from '../api/categories';
+=======
+>>>>>>> invoice
 
 // ── Color palette ────────────────────────────────────────────────────────────
 const C = {
@@ -91,6 +101,7 @@ export default function AnalyticsPage() {
   const [programCmp, setProgramCmp] = useState<ProgramComparison | null>(null);
   const [cpTrends, setCpTrends] = useState<CheckpointStats[]>([]);
 
+<<<<<<< HEAD
   // Stock trend controls (by product)
   const [trendDays, setTrendDays] = useState(90);
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -100,12 +111,22 @@ export default function AnalyticsPage() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [recvDist, setRecvDist] = useState<ReceivedVsDistributed[]>([]);
   const [recvDistCategoryId, setRecvDistCategoryId] = useState<number | ''>('');
+=======
+  // Stock trend controls
+  const [trendDays, setTrendDays] = useState(90);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [trendProductId, setTrendProductId] = useState<number | ''>('');
+>>>>>>> invoice
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
+<<<<<<< HEAD
         const [dash, st, cd, dt, ws, tp, vs, pc, ct, prods, cats, rd] = await Promise.all([
+=======
+        const [dash, st, cd, dt, ws, tp, vs, pc, ct, prods] = await Promise.all([
+>>>>>>> invoice
           getDashboardStats(),
           getStockTrends(undefined, 90),
           getDistributionByCategory(),
@@ -116,8 +137,11 @@ export default function AnalyticsPage() {
           getProgramComparison(),
           getCheckpointTrends(),
           getAllProducts(),
+<<<<<<< HEAD
           getAllCategories(),
           getReceivedVsDistributed(),
+=======
+>>>>>>> invoice
         ]);
         setDashboard(dash);
         setStockTrends(st);
@@ -129,8 +153,11 @@ export default function AnalyticsPage() {
         setProgramCmp(pc);
         setCpTrends(ct);
         setProducts(prods);
+<<<<<<< HEAD
         setCategories(cats);
         setRecvDist(rd);
+=======
+>>>>>>> invoice
       } catch (e) {
         console.error('Failed to load analytics', e);
       } finally {
@@ -147,11 +174,23 @@ export default function AnalyticsPage() {
     } catch { /* ignore */ }
   };
 
+<<<<<<< HEAD
   const reloadRecvDist = async (cid: number | '') => {
     try {
       setRecvDist(await getReceivedVsDistributed(cid || undefined));
     } catch { /* ignore */ }
   };
+=======
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-10 w-10 animate-spin text-brown" />
+      </div>
+    );
+  }
+
+  const cp = dashboard?.latest_checkpoint;
+>>>>>>> invoice
 
   // Format received vs distributed for chart
   const recvDistChartData = recvDist.map(r => {
@@ -259,6 +298,7 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </ChartCard>
 
+<<<<<<< HEAD
         {/* Received vs Distributed by Checkpoint */}
         <ChartCard
           title="Received vs Distributed by Period"
@@ -333,6 +373,8 @@ export default function AnalyticsPage() {
           )}
         </ChartCard>
 
+=======
+>>>>>>> invoice
         {/* Distribution Over Time */}
         <ChartCard title="Monthly Distribution">
           <ResponsiveContainer width="100%" height={280}>

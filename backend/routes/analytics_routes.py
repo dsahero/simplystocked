@@ -23,6 +23,7 @@ def stock_trends(
     return analytics_controller.get_stock_trends(db, product_id, days)
 
 
+<<<<<<< HEAD
 @router.get("/received-vs-distributed")
 def received_vs_distributed(
     category_id: Optional[int] = Query(None, description="Filter to a single category"),
@@ -32,6 +33,8 @@ def received_vs_distributed(
     return analytics_controller.get_received_vs_distributed(db, category_id)
 
 
+=======
+>>>>>>> invoice
 @router.get("/distribution-by-category")
 def distribution_by_category(
     start_date: Optional[str] = Query(None),

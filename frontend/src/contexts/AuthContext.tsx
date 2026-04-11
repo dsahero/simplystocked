@@ -1,12 +1,20 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { loginUser, loginWithGoogleApi, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
 import { clearToken } from '../api/client';
+=======
+import { loginUser, getAllUsers, createUser, updateUserRole, updatePassword as apiUpdatePassword, deleteUser, ApiUser } from '../api/auth';
+>>>>>>> invoice
 import { User, UserRole } from '../types';
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
+<<<<<<< HEAD
   loginWithGoogle: (credential: string) => Promise<void>;
+=======
+  loginWithGoogle: () => Promise<void>;
+>>>>>>> invoice
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -14,7 +22,11 @@ interface AuthContextType {
   isAuthReady: boolean;
   // User management (admin)
   getAllUsers: () => Promise<ApiUser[]>;
+<<<<<<< HEAD
   createUser: (username: string, password: string, email: string, role: string) => Promise<ApiUser>;
+=======
+  createUser: (username: string, password: string, role: string) => Promise<ApiUser>;
+>>>>>>> invoice
   updateUserRole: (userId: number, role: string) => Promise<ApiUser>;
   deleteUser: (userId: number) => Promise<{ message: string }>;
 }
@@ -27,8 +39,13 @@ function apiUserToUser(u: ApiUser): User {
   return {
     id: String(u.UserId),
     name: u.Username,
+<<<<<<< HEAD
     email: u.Email ?? '',
     role: u.Role as UserRole,
+=======
+    email: u.Username, // username is the email
+    role: (u.Role === 'manager' ? 'user' : u.Role) as UserRole,
+>>>>>>> invoice
     avatarUrl: '',
   };
 }
@@ -57,17 +74,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(appUser));
   };
 
+<<<<<<< HEAD
   const loginWithGoogle = async (credential: string) => {
     const apiUser = await loginWithGoogleApi(credential);
     const appUser = apiUserToUser(apiUser);
     setUser(appUser);
     localStorage.setItem(SESSION_KEY, JSON.stringify(appUser));
+=======
+  // Google login is not supported with the MySQL backend
+  const loginWithGoogle = async () => {
+    throw new Error('Google sign-in is not available. Please use your username and password.');
+>>>>>>> invoice
   };
 
   const logout = async () => {
     setUser(null);
     localStorage.removeItem(SESSION_KEY);
+<<<<<<< HEAD
     clearToken();
+=======
+>>>>>>> invoice
   };
 
   const updateProfile = async (updates: Partial<User>) => {

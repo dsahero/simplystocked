@@ -29,12 +29,15 @@ export interface DashboardStats {
   total_stock: number;
   low_stock_count: number;
   vendor_count: number;
+<<<<<<< HEAD
   total_transactions: number;
   total_transaction_value: number;
   total_invoices: number;
   total_invoice_spending: number;
   total_waste_units: number;
   total_waste_cost: number;
+=======
+>>>>>>> invoice
 }
 
 export function getDashboardStats() {
@@ -58,6 +61,7 @@ export function getStockTrends(productId?: number, days = 30) {
   return apiFetch<StockTrendPoint[]>(`/analytics/stock-trends?${params}`);
 }
 
+<<<<<<< HEAD
 // ── Received vs Distributed per checkpoint ────────────────────────────
 export interface ReceivedVsDistributed {
   CheckPointId: number;
@@ -75,6 +79,8 @@ export function getReceivedVsDistributed(categoryId?: number) {
   return apiFetch<ReceivedVsDistributed[]>(`/analytics/received-vs-distributed?${params}`);
 }
 
+=======
+>>>>>>> invoice
 // ── Distribution by category ──────────────────────────────────────────
 export interface CategoryDistribution {
   CategoryName: string;

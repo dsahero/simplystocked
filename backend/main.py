@@ -17,8 +17,12 @@ from routes import (
     checkpoint_routes,
     analytics_routes,
     waste_routes,
+<<<<<<< HEAD
     predictions_routes,
     team_routes,
+=======
+    ocr_routes,
+>>>>>>> invoice
 )
 
 try:
@@ -35,7 +39,11 @@ cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost
 
 app.add_middleware(
     CORSMiddleware,
+<<<<<<< HEAD
     allow_origins=[o.strip() for o in cors_origins],
+=======
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+>>>>>>> invoice
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,8 +58,12 @@ app.include_router(invoice_routes.router)
 app.include_router(checkpoint_routes.router)
 app.include_router(analytics_routes.router)
 app.include_router(waste_routes.router)
+<<<<<<< HEAD
 app.include_router(predictions_routes.router)
 app.include_router(team_routes.router)
+=======
+app.include_router(ocr_routes.router)
+>>>>>>> invoice
 
 
 @app.on_event("startup")

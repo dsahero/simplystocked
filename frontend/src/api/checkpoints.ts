@@ -11,10 +11,13 @@ export interface ApiTransaction {
   TransactionId: number;
   TotalAmount: number;
   CheckPointId: number;
+<<<<<<< HEAD
   TransactionDate?: string;
   UserId?: number;
   Username?: string;
   Program?: 'open_market' | 'grocery';
+=======
+>>>>>>> invoice
   items?: ApiTransactionItem[];
 }
 

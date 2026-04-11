@@ -4,8 +4,12 @@ from sqlalchemy import text
 
 
 def get_dashboard_stats(db: Session):
+<<<<<<< HEAD
     """Aggregate stats from the most recent populated checkpoint plus live counts."""
     # Get latest checkpoint that has actual data (TransactionCount > 0)
+=======
+    """Aggregate stats from the most recent checkpoint plus live counts."""
+>>>>>>> invoice
     result = db.execute(text("""
         SELECT cp.CheckPointId, cp.Date, cp.StartDate, cp.EndDate,
                cp.TotalSpent, cp.TotalDistributedValue, cp.TotalWasteCost, cp.NetValue,
@@ -16,7 +20,10 @@ def get_dashboard_stats(db: Session):
                cat.CategoryName AS TopCategoryName
         FROM CheckPoint cp
         LEFT JOIN Category cat ON cp.TopCategoryId = cat.CategoryId
+<<<<<<< HEAD
         WHERE cp.TransactionCount > 0
+=======
+>>>>>>> invoice
         ORDER BY cp.StartDate DESC
         LIMIT 1
     """))
@@ -25,6 +32,7 @@ def get_dashboard_stats(db: Session):
     counts = db.execute(text("""
         SELECT
             (SELECT COUNT(*) FROM FoodProduct) AS total_products,
+<<<<<<< HEAD
             (SELECT COALESCE(SUM(ss.Quantity), 0) FROM StockSnapshot ss) AS total_stock,
             (SELECT COUNT(*) FROM StockSnapshot WHERE StockLevel = 'Low') AS low_stock_count,
             (SELECT COUNT(DISTINCT VendorId) FROM Vendor) AS vendor_count,
@@ -34,6 +42,11 @@ def get_dashboard_stats(db: Session):
             (SELECT COALESCE(SUM(TotalPrice), 0) FROM Invoice) AS total_invoice_spending,
             (SELECT COALESCE(SUM(Quantity), 0) FROM Waste) AS total_waste_units,
             (SELECT COALESCE(SUM(EstimatedCost), 0) FROM Waste) AS total_waste_cost
+=======
+            (SELECT SUM(ss.Quantity) FROM StockSnapshot ss) AS total_stock,
+            (SELECT COUNT(*) FROM StockSnapshot WHERE StockLevel = 'Low') AS low_stock_count,
+            (SELECT COUNT(DISTINCT VendorId) FROM Vendor) AS vendor_count
+>>>>>>> invoice
     """))
     live = counts.mappings().first()
     return latest, live
@@ -66,6 +79,7 @@ def get_stock_trends(db: Session, product_id: Optional[int] = None, days: int = 
     return result.mappings().all()
 
 
+<<<<<<< HEAD
 def get_received_vs_distributed(db: Session, category_id: Optional[int] = None):
     """Per-checkpoint: units received (invoices) vs units distributed (transactions), optionally by category."""
     cat_filter_inv = "AND fp.CategoryId = :category_id" if category_id else ""
@@ -107,6 +121,8 @@ def get_received_vs_distributed(db: Session, category_id: Optional[int] = None):
     return result.mappings().all()
 
 
+=======
+>>>>>>> invoice
 def get_distribution_by_category(db: Session, start_date: Optional[str] = None, end_date: Optional[str] = None):
     """Total distributed quantities grouped by category."""
     params: dict = {}

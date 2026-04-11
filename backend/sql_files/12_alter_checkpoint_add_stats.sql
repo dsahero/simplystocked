@@ -1,0 +1,15 @@
+ALTER TABLE checkpoint
+ADD COLUMN TotalSpent decimal(10,2) DEFAULT 0.00,
+ADD COLUMN TotalDistributedValue decimal(10,2) DEFAULT 0.00,
+ADD COLUMN TotalWasteCost decimal(10,2) DEFAULT 0.00,
+ADD COLUMN NetValue decimal(10,2) DEFAULT 0.00,
+ADD COLUMN ItemsReceived int DEFAULT 0,
+ADD COLUMN ItemsDistributed int DEFAULT 0,
+ADD COLUMN ItemsWasted int DEFAULT 0,
+ADD COLUMN TransactionCount int DEFAULT 0,
+ADD COLUMN UniqueVisitors int DEFAULT 0,
+ADD COLUMN InvoiceCount int DEFAULT 0,
+ADD COLUMN AvgTransactionValue decimal(10,2) DEFAULT 0.00,
+ADD COLUMN AvgItemsPerTransaction decimal(10,2) DEFAULT 0.00,
+ADD COLUMN LowStockAlerts int DEFAULT 0,
+ADD COLUMN Notes text DEFAULT NULL;

@@ -14,8 +14,11 @@ import AccountPage from './pages/AccountPage';
 import VendorsPage from './pages/VendorsPage';
 import CheckpointsPage from './pages/CheckpointsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+<<<<<<< HEAD
 import PredictionsPage from './pages/PredictionsPage';
 import TeamPage from './pages/TeamPage';
+=======
+>>>>>>> invoice
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

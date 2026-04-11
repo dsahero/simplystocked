@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { User, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+=======
+import { User, Lock, Loader2, AlertCircle } from 'lucide-react';
+>>>>>>> invoice
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { BrandLogo } from '../components/ui/Brand';
@@ -13,7 +17,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+<<<<<<< HEAD
   const { login, loginWithGoogle } = useAuth();
+=======
+  const { login } = useAuth();
+>>>>>>> invoice
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +139,7 @@ export default function LoginPage() {
               )}
             </button>
 
+<<<<<<< HEAD
             <div className="flex justify-center pt-2">
               <GoogleLogin
                 onSuccess={async (cred) => {
@@ -147,6 +156,8 @@ export default function LoginPage() {
               />
             </div>
 
+=======
+>>>>>>> invoice
           </form>
         </div>
       </div>

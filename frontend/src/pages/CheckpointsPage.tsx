@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ClipboardCheck, Plus, Calendar, Loader2, AlertCircle, X, CheckCircle2,
+<<<<<<< HEAD
   ChevronRight, ChevronDown, ArrowRightLeft, Package, BarChart3, Filter, ClipboardList, Search,
+=======
+  ChevronRight, ArrowRightLeft, Package, BarChart3,
+>>>>>>> invoice
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -9,9 +13,14 @@ import {
   getAllCheckpoints, createCheckpoint, getTransactionsByCheckpoint, getYearEndSummary, rollover,
   ApiCheckpoint, ApiTransaction, ApiYearEndSummary, ApiRolloverResult,
 } from '../api/checkpoints';
+<<<<<<< HEAD
 import { getAllStock, setStockBaseline, ApiStock } from '../api/inventory';
 
 type TabType = 'checkpoints' | 'baseline' | 'rollover';
+=======
+
+type TabType = 'checkpoints' | 'rollover';
+>>>>>>> invoice
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -32,8 +41,11 @@ export default function CheckpointsPage() {
   // Transaction detail modal
   const [detailCheckpoint, setDetailCheckpoint] = useState<(ApiCheckpoint & { transactions: ApiTransaction[] }) | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+<<<<<<< HEAD
   const [programFilter, setProgramFilter] = useState<'all' | 'open_market' | 'grocery'>('all');
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+=======
+>>>>>>> invoice
 
   // Rollover tab state
   const [selectedCpId, setSelectedCpId] = useState<number | ''>('');
@@ -43,6 +55,7 @@ export default function CheckpointsPage() {
   const [rolloverLoading, setRolloverLoading] = useState(false);
   const [rolloverResult, setRolloverResult] = useState<ApiRolloverResult | null>(null);
 
+<<<<<<< HEAD
   // Baseline tab state
   const [stockItems, setStockItems] = useState<ApiStock[]>([]);
   const [baselineCounts, setBaselineCounts] = useState<Record<number, { om: string; gs: string }>>({});
@@ -52,6 +65,8 @@ export default function CheckpointsPage() {
   const [baselineSuccess, setBaselineSuccess] = useState(false);
   const [baselineChanged, setBaselineChanged] = useState<Set<number>>(new Set());
 
+=======
+>>>>>>> invoice
   useEffect(() => { loadCheckpoints(); }, []);
 
   const loadCheckpoints = async () => {
@@ -62,6 +77,7 @@ export default function CheckpointsPage() {
     finally { setLoading(false); }
   };
 
+<<<<<<< HEAD
   const loadBaseline = async () => {
     setBaselineLoading(true);
     try {
@@ -110,6 +126,8 @@ export default function CheckpointsPage() {
     }
   };
 
+=======
+>>>>>>> invoice
   // ── Create checkpoint ───────────────────────────────────────────────
   const openCreate = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -138,6 +156,7 @@ export default function CheckpointsPage() {
   const openDetail = async (cp: ApiCheckpoint) => {
     setDetailLoading(true);
     setDetailCheckpoint(null);
+<<<<<<< HEAD
     setProgramFilter('all');
     setExpandedDates(new Set());
     try {
@@ -149,10 +168,16 @@ export default function CheckpointsPage() {
         if (tx.TransactionDate && dates.size < 3) dates.add(tx.TransactionDate);
       }
       setExpandedDates(dates);
+=======
+    try {
+      const data = await getTransactionsByCheckpoint(cp.CheckPointId);
+      setDetailCheckpoint(data);
+>>>>>>> invoice
     } catch { setError('Failed to load transactions.'); }
     finally { setDetailLoading(false); }
   };
 
+<<<<<<< HEAD
   // Group transactions by date, filtered by program
   const groupedTransactions = useMemo(() => {
     if (!detailCheckpoint) return [];
@@ -177,6 +202,8 @@ export default function CheckpointsPage() {
     });
   };
 
+=======
+>>>>>>> invoice
   // ── Load summary for rollover ───────────────────────────────────────
   const handleLoadSummary = async () => {
     if (selectedCpId === '') return;
@@ -203,7 +230,10 @@ export default function CheckpointsPage() {
 
   const tabs: { id: TabType; name: string; icon: typeof ClipboardCheck }[] = [
     { id: 'checkpoints', name: 'Checkpoints', icon: ClipboardCheck },
+<<<<<<< HEAD
     { id: 'baseline', name: 'Set Baseline', icon: ClipboardList },
+=======
+>>>>>>> invoice
     { id: 'rollover', name: 'Year-End Rollover', icon: ArrowRightLeft },
   ];
 
@@ -318,6 +348,7 @@ export default function CheckpointsPage() {
       )}
 
       {/* ── Rollover tab ─────────────────────────────────────────────────── */}
+<<<<<<< HEAD
       {/* ── Baseline tab ────────────────────────────────────────────────── */}
       {activeTab === 'baseline' && (
         <div className="space-y-6">
@@ -514,6 +545,8 @@ export default function CheckpointsPage() {
         </div>
       )}
 
+=======
+>>>>>>> invoice
       {activeTab === 'rollover' && (
         <div className="max-w-3xl mx-auto space-y-8">
           {/* Select checkpoint */}
@@ -786,7 +819,11 @@ export default function CheckpointsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+<<<<<<< HEAD
               className="fixed left-1/2 top-1/2 z-[110] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
+=======
+              className="fixed left-1/2 top-1/2 z-[110] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[48px] bg-white dark:bg-neutral-900 p-10 shadow-2xl max-h-[90vh] overflow-y-auto border border-forest/5"
+>>>>>>> invoice
             >
               {detailLoading ? (
                 <div className="flex items-center justify-center py-16">
@@ -794,8 +831,12 @@ export default function CheckpointsPage() {
                 </div>
               ) : detailCheckpoint && (
                 <>
+<<<<<<< HEAD
                   {/* Header */}
                   <div className="flex items-start justify-between mb-6">
+=======
+                  <div className="flex items-center justify-between mb-8">
+>>>>>>> invoice
                     <div>
                       <h2 className="text-3xl font-display font-bold text-forest dark:text-white">
                         Checkpoint #{detailCheckpoint.CheckPointId}
@@ -809,6 +850,7 @@ export default function CheckpointsPage() {
                     </button>
                   </div>
 
+<<<<<<< HEAD
                   {/* Program filter */}
                   <div className="flex items-center gap-2 mb-6">
                     <Filter className="h-4 w-4 text-forest/30 shrink-0" />
@@ -837,10 +879,14 @@ export default function CheckpointsPage() {
 
                   {/* Grouped by date */}
                   {groupedTransactions.length === 0 ? (
+=======
+                  {detailCheckpoint.transactions.length === 0 ? (
+>>>>>>> invoice
                     <div className="text-center py-12">
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-forest/5 mb-4">
                         <Package className="h-8 w-8 text-forest/20" />
                       </div>
+<<<<<<< HEAD
                       <p className="text-forest/40 dark:text-neutral-500 font-medium">
                         {detailCheckpoint.transactions.length === 0
                           ? 'No transactions recorded for this period.'
@@ -939,6 +985,34 @@ export default function CheckpointsPage() {
                           </div>
                         );
                       })}
+=======
+                      <p className="text-forest/40 dark:text-neutral-500 font-medium">No transactions recorded for this period.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {detailCheckpoint.transactions.map((tx) => (
+                        <div key={tx.TransactionId} className="rounded-[28px] border border-forest/5 dark:border-neutral-700 bg-cream/10 dark:bg-neutral-800/50 p-5 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-forest dark:text-white">Transaction #{tx.TransactionId}</span>
+                            <span className="text-sm font-bold text-brown">${tx.TotalAmount.toFixed(2)}</span>
+                          </div>
+                          {tx.items && tx.items.length > 0 && (
+                            <div className="space-y-1.5 pl-2 border-l-2 border-forest/10 dark:border-neutral-700 ml-1">
+                              {tx.items.map((item) => (
+                                <div key={item.TransactionItemId} className="flex items-center justify-between text-xs">
+                                  <span className="text-forest/60 dark:text-neutral-400 font-medium">
+                                    {item.ProductName} <span className="text-forest/30">({item.CategoryName})</span>
+                                  </span>
+                                  <span className="font-bold text-forest/70 dark:text-neutral-300 shrink-0 ml-4">
+                                    {item.Quantity} × ${item.ProductPrice.toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+>>>>>>> invoice
                     </div>
                   )}
                 </>

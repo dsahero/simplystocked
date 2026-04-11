@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+.claude
+.invoice_test_images/

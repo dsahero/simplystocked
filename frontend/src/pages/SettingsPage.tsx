@@ -15,24 +15,41 @@ export default function SettingsPage() {
   const canSeeUsers = currentUser?.role === 'admin' || currentUser?.role === 'manager';
   const [activeTab, setActiveTab] = useState<'users' | 'locations' | 'general'>(canSeeUsers ? 'users' : 'locations');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+<<<<<<< HEAD
   const [newUser, setNewUser] = useState({ username: '', email: '', role: 'user' as UserRole });
+=======
+  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' as UserRole });
+>>>>>>> invoice
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [newLocationName, setNewLocationName] = useState('');
 
   useEffect(() => {
+<<<<<<< HEAD
     if (activeTab === 'users' && canSeeUsers) {
       setUsersLoading(true);
       getAllUsers().then(setUsers).catch(console.error).finally(() => setUsersLoading(false));
     }
   }, [activeTab, canSeeUsers]);
+=======
+    if (activeTab === 'users') {
+      setUsersLoading(true);
+      getAllUsers().then(setUsers).catch(console.error).finally(() => setUsersLoading(false));
+    }
+  }, [activeTab]);
+>>>>>>> invoice
 
   const filteredUsers = users.filter(u =>
     u.Username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+<<<<<<< HEAD
   const changeRole = async (userId: number, newRole: string) => {
+=======
+  const toggleRole = async (userId: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'manager' : 'admin';
+>>>>>>> invoice
     try {
       const updated = await apiUpdateUserRole(userId, newRole);
       setUsers(users.map(u => u.UserId === userId ? updated : u));
@@ -50,10 +67,18 @@ export default function SettingsPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+<<<<<<< HEAD
       const created = await apiCreateUser(newUser.username, 'password123', newUser.email, newUser.role);
       setUsers([...users, created]);
       setIsAddUserModalOpen(false);
       setNewUser({ username: '', email: '', role: 'user' });
+=======
+      const backendRole = newUser.role === 'user' ? 'manager' : newUser.role;
+      const created = await apiCreateUser(newUser.email, 'password123', backendRole);
+      setUsers([...users, created]);
+      setIsAddUserModalOpen(false);
+      setNewUser({ name: '', email: '', role: 'user' });
+>>>>>>> invoice
       alert(`User created! Temporary password: password123`);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to create user.');
@@ -171,12 +196,17 @@ export default function SettingsPage() {
                           </p>
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
                             <Mail className="h-3 w-3" />
+<<<<<<< HEAD
                             {u.Email ?? '—'}
+=======
+                            {u.Username}
+>>>>>>> invoice
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {currentUser?.role === 'admin' ? (
+<<<<<<< HEAD
                           <div className={cn(
                             "flex items-center gap-1.5 rounded-full pl-3 pr-1 py-1 text-xs font-bold transition-all",
                             u.Role === 'admin'
@@ -195,6 +225,20 @@ export default function SettingsPage() {
                               <option value="admin">ADMIN</option>
                             </select>
                           </div>
+=======
+                          <button
+                            onClick={() => toggleRole(u.UserId, u.Role)}
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
+                              u.Role === 'admin'
+                                ? "bg-brown/10 dark:bg-brown/20 text-brown hover:bg-brown/20 dark:hover:bg-brown/30"
+                                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                            )}
+                          >
+                            {u.Role === 'admin' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Shield className="h-3.5 w-3.5" />}
+                            {u.Role.toUpperCase()}
+                          </button>
+>>>>>>> invoice
                         ) : (
                           <div className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
@@ -344,13 +388,18 @@ export default function SettingsPage() {
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+<<<<<<< HEAD
                     Username (used to log in with password)
+=======
+                    Username (used to log in)
+>>>>>>> invoice
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                     <input
                       type="text"
                       required
+<<<<<<< HEAD
                       value={newUser.username}
                       onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                       placeholder="jane_doe"
@@ -371,6 +420,11 @@ export default function SettingsPage() {
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                       placeholder="jane@gmail.com"
+=======
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      placeholder="user@example.com"
+>>>>>>> invoice
                       className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
                     />
                   </div>

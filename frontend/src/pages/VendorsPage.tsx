@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
+<<<<<<< HEAD
 import { Truck, Search, Plus, Edit2, Trash2, X, FileText, ChevronRight, ChevronDown, Loader2, AlertCircle, CheckCircle2, ClipboardCheck, Filter } from 'lucide-react';
+=======
+import { Truck, Search, Plus, Edit2, Trash2, X, FileText, ChevronRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+>>>>>>> invoice
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { getAllVendors, createVendor, updateVendor, deleteVendor, ApiVendor } from '../api/vendors';
 import { getAllInvoices, ApiInvoice } from '../api/invoices';
+<<<<<<< HEAD
 import { getAllCheckpoints, ApiCheckpoint } from '../api/checkpoints';
+=======
+>>>>>>> invoice
 
 type TabType = 'vendors' | 'invoices';
 
@@ -19,6 +26,7 @@ export default function VendorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+<<<<<<< HEAD
   const [checkpoints, setCheckpoints] = useState<ApiCheckpoint[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +34,11 @@ export default function VendorsPage() {
   const [filterVendorId, setFilterVendorId] = useState<number | ''>('');
   const [filterCheckpointId, setFilterCheckpointId] = useState<number | ''>('');
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<Set<number | 'unassigned'>>(new Set());
+=======
+  const [searchQuery, setSearchQuery] = useState('');
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [filterVendorId, setFilterVendorId] = useState<number | ''>('');
+>>>>>>> invoice
 
   // Modal state
   const [isAddingVendor, setIsAddingVendor] = useState(false);
@@ -45,10 +58,16 @@ export default function VendorsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+<<<<<<< HEAD
       const [v, inv, cps] = await Promise.all([getAllVendors(), getAllInvoices(), getAllCheckpoints()]);
       setVendors(v);
       setInvoices(inv);
       setCheckpoints(cps);
+=======
+      const [v, inv] = await Promise.all([getAllVendors(), getAllInvoices()]);
+      setVendors(v);
+      setInvoices(inv);
+>>>>>>> invoice
     } catch {
       setError('Failed to load data.');
     } finally {
@@ -83,6 +102,7 @@ export default function VendorsPage() {
     return list;
   }, [invoices, filterVendorId, invoiceSearch]);
 
+<<<<<<< HEAD
   // Assign each invoice to a checkpoint based on date range
   const invoicesByCheckpoint = useMemo(() => {
     const sorted = [...checkpoints].sort((a, b) => b.StartDate.localeCompare(a.StartDate));
@@ -125,6 +145,8 @@ export default function VendorsPage() {
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
+=======
+>>>>>>> invoice
   // ── Vendor CRUD handlers ────────────────────────────────────────────
   const openAdd = () => {
     setFormData(emptyVendor);
@@ -340,7 +362,11 @@ export default function VendorsPage() {
                 className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
               />
             </div>
+<<<<<<< HEAD
             <div className="flex items-center gap-2 flex-wrap">
+=======
+            <div className="flex items-center gap-2">
+>>>>>>> invoice
               <Truck className="h-4 w-4 text-neutral-400 shrink-0" />
               <select
                 value={filterVendorId}
@@ -352,6 +378,7 @@ export default function VendorsPage() {
                   <option key={v.VendorId} value={v.VendorId}>{v.VendorName || `Vendor #${v.VendorId}`}</option>
                 ))}
               </select>
+<<<<<<< HEAD
               <ClipboardCheck className="h-4 w-4 text-neutral-400 shrink-0 ml-1" />
               <select
                 value={filterCheckpointId}
@@ -374,6 +401,12 @@ export default function VendorsPage() {
                   onClick={() => { setFilterVendorId(''); setFilterCheckpointId(''); }}
                   className="rounded-lg p-1 text-forest/30 hover:text-forest transition-colors"
                   title="Clear filters"
+=======
+              {filterVendorId !== '' && (
+                <button
+                  onClick={() => setFilterVendorId('')}
+                  className="rounded-lg p-1 text-forest/30 hover:text-forest transition-colors"
+>>>>>>> invoice
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -381,6 +414,7 @@ export default function VendorsPage() {
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Invoices grouped by checkpoint */}
           {invoicesByCheckpoint.length === 0 ? (
             <div className="rounded-[32px] border border-forest/5 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm px-8 py-12 text-center">
@@ -482,6 +516,65 @@ export default function VendorsPage() {
               })}
             </div>
           )}
+=======
+          {/* Invoices table */}
+          <div className="overflow-hidden rounded-[32px] border border-forest/5 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-forest/5 dark:bg-neutral-800 text-[10px] font-bold uppercase tracking-widest text-forest/40 dark:text-neutral-400">
+                  <tr>
+                    <th className="px-8 py-5">Invoice #</th>
+                    <th className="px-8 py-5">Date</th>
+                    <th className="px-8 py-5">Vendor</th>
+                    <th className="px-8 py-5">Description</th>
+                    <th className="px-8 py-5 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-forest/5 dark:divide-neutral-800">
+                  {filteredInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-12 text-center text-forest/40 dark:text-neutral-500 font-medium">
+                        {invoices.length === 0 ? 'No invoices yet.' : 'No invoices match your filters.'}
+                      </td>
+                    </tr>
+                  ) : filteredInvoices.map((inv) => (
+                    <tr
+                      key={inv.InvoiceId}
+                      className="group hover:bg-cream/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedInvoice(inv)}
+                    >
+                      <td className="px-8 py-5">
+                        <span className="inline-flex items-center gap-2 font-bold text-forest dark:text-white">
+                          <FileText className="h-4 w-4 text-forest/30" />
+                          #{inv.InvoiceId}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-forest/70 dark:text-neutral-300 font-medium">
+                        {new Date(inv.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="inline-flex items-center rounded-xl bg-forest/5 dark:bg-neutral-800 px-3 py-1 text-xs font-bold text-forest/60 dark:text-neutral-400">
+                          {inv.VendorName ?? inv.VendorCity ?? `Vendor #${inv.VendorId}`}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-forest/60 dark:text-neutral-400 font-medium max-w-xs truncate">
+                        {inv.Desc}
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <span className={cn(
+                          'font-bold text-base',
+                          inv.TotalPrice > 500 ? 'text-forest dark:text-white' : 'text-forest/60 dark:text-neutral-300'
+                        )}>
+                          ${inv.TotalPrice.toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+>>>>>>> invoice
 
           {/* Summary */}
           {filteredInvoices.length > 0 && (

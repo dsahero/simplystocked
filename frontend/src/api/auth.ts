@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 import { apiFetch, setToken } from './client';
+=======
+import { apiFetch } from './client';
+>>>>>>> invoice
 
 export interface ApiUser {
   UserId: number;
   Username: string;
+<<<<<<< HEAD
   Email?: string;
   Role: string;
   access_token?: string;
@@ -24,16 +29,33 @@ export async function loginWithGoogleApi(credential: string) {
   });
   if (user.access_token) setToken(user.access_token);
   return user;
+=======
+  Role: string;
+}
+
+export function loginUser(username: string, password: string) {
+  return apiFetch<ApiUser>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+>>>>>>> invoice
 }
 
 export function getAllUsers() {
   return apiFetch<ApiUser[]>('/auth/users');
 }
 
+<<<<<<< HEAD
 export function createUser(username: string, password: string, email: string, role: string) {
   return apiFetch<ApiUser>('/auth/users', {
     method: 'POST',
     body: JSON.stringify({ username, password, email, role }),
+=======
+export function createUser(username: string, password: string, role: string) {
+  return apiFetch<ApiUser>('/auth/users', {
+    method: 'POST',
+    body: JSON.stringify({ username, password, role }),
+>>>>>>> invoice
   });
 }
 
