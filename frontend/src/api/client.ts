@@ -10,7 +10,15 @@ export async function apiFetch<T>(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? `Request failed: ${res.status}`);
+    const detail = err.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((d: any) => {
+          const loc = Array.isArray(d.loc) ? d.loc.join('.') : '';
+          const msg = d.msg ?? JSON.stringify(d);
+          return loc ? `${loc}: ${msg}` : msg;
+        }).join('; ')
+      : (typeof detail === 'string' ? detail : `Request failed: ${res.status}`);
+    throw new Error(message);
   }
   // 204 No Content — return empty object
   if (res.status === 204) return {} as T;
