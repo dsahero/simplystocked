@@ -18,6 +18,7 @@ from routes import (
     analytics_routes,
     waste_routes,
     predictions_routes,
+    team_routes,
 )
 
 try:
@@ -50,6 +51,7 @@ app.include_router(checkpoint_routes.router)
 app.include_router(analytics_routes.router)
 app.include_router(waste_routes.router)
 app.include_router(predictions_routes.router)
+app.include_router(team_routes.router)
 
 
 @app.on_event("startup")
