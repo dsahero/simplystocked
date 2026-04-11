@@ -6,15 +6,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-if not DB_PASSWORD:
-    raise RuntimeError("DB_PASSWORD environment variable is not set")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+    DB_USER = os.getenv("DB_USER", "root")
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = os.getenv("DB_PORT", "3306")
+    DB_NAME = os.getenv("DB_NAME", "simplystocked")
 
-DATABASE_URL = f"mysql+pymysql://root:{DB_PASSWORD}@localhost:3306/SimplyStocked"
+    # Cloud SQL Unix socket: set CLOUD_SQL_CONNECTION_NAME=project:region:instance
+    CLOUD_SQL_CONNECTION_NAME = os.getenv("CLOUD_SQL_CONNECTION_NAME")
+    if CLOUD_SQL_CONNECTION_NAME:
+        socket_path = f"/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
+        DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@/{DB_NAME}?unix_socket={socket_path}"
+    else:
+        DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True  # Set to False in production — logs all SQL queries when True
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+    pool_size=5,
+    max_overflow=2,
+    pool_timeout=30,
+    pool_recycle=1800,
 )
 
 SessionLocal = sessionmaker(
@@ -25,7 +39,6 @@ SessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-# Dependency — use this in your route functions
 def get_db():
     db = SessionLocal()
     try:
