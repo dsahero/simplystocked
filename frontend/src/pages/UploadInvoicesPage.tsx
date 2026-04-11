@@ -462,10 +462,10 @@ function ItemCard({ item, idx, matched, program, onChange, onSelect, onClear, on
 
 // ── String Similarity Helper ────────────────────────────────────────────────
 function getSimilarity(s1: string, s2: string): number {
+  if (!s1 || !s2) return 0;
   const v1 = s1.toLowerCase().trim();
   const v2 = s2.toLowerCase().trim();
   if (v1 === v2) return 1.0;
-  if (!v1 || !v2) return 0;
   
   // Very basic overlap matching
   const words1 = v1.split(/\s+/);
@@ -998,18 +998,7 @@ export default function UploadInvoicesPage() {
             )}
           </div>
           
-          {/* Live Scan Preview */}
-          {rawScanText && (
-            <div className="w-full max-w-2xl mt-4 text-left animate-in fade-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-3 w-3 text-forest/40" />
-                <span className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Live Scan Data Output</span>
-              </div>
-              <div className="rounded-2xl border border-forest/5 bg-forest/[0.02] dark:bg-neutral-900/50 p-4 font-mono text-[10px] text-forest/60 dark:text-neutral-400 max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                {rawScanText}
-              </div>
-            </div>
-          )}
+          {/* Live Scan Preview will now show inside the Review Panel when active */}
         </div>
       )}
 
@@ -1238,6 +1227,19 @@ export default function UploadInvoicesPage() {
                 )}
               </button>
             </div>
+
+            {/* Diagnostic Data (Always visible during review) */}
+            {rawScanText && (
+              <div className="w-full pt-8 mt-8 border-t border-forest/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-3 w-3 text-forest/40" />
+                  <span className="text-[10px] font-bold text-forest/40 uppercase tracking-widest">Live Scan Data Output (Diagnostics)</span>
+                </div>
+                <div className="rounded-2xl border border-forest/5 bg-forest/[0.02] dark:bg-neutral-900/50 p-4 font-mono text-[10px] text-forest/60 dark:text-neutral-400 max-h-64 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                  {rawScanText}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

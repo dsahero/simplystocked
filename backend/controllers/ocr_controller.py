@@ -104,9 +104,10 @@ def image_to_raw_text(image_base64: str, mime_type: str = "image/jpeg", model: s
                 {
                     "role": "user",
                     "content": (
-                        "ULTRA-LITERAL OCR TASK: Transcribe EVERY SINGLE WORD, NUMBER, AND CHARACTER on this page. "
-                        "Do not skip anything. Start from the very top-left and read row-by-row to the bottom-right. "
-                        "Your goal is 100% literal coverage of all text, headers, and the entire table. "
+                        "ULTRA-LITERAL OCR TASK: Transcribe EVERY SINGLE WORD, NUMBER, AND CHARACTER on this page.\n"
+                        "1. Identify the VENDOR, DATE, and INVOICE # headers.\n"
+                        "2. For the items table, FIRST transcribe the COLUMN HEADERS (e.g. 'Code', 'Description', 'Quantity', 'Price', 'Extension').\n"
+                        "3. Then, transcribe EVERY SINGLE ROW of the table without omission.\n"
                         "Do not summarize. Do not explain. Just list the text exactly as it appears."
                     ),
                     "images": [image_bytes],
@@ -157,27 +158,27 @@ RULES:
 
 _PARSE_PROMPT = """
 You are a precise data extractor. Convert the following RAW OCR TEXT into a JSON object.
-The text is messy; your job is to hunt for the specific fields.
+Use the COLUMN HEADERS found in the text to correctly map the data fields.
 
 EXTRACT THESE FIELDS:
-- vendorName: The supplier company (e.g. Sysco, Keany, US Foods). Look at the top headers.
-- date: Invoice date. Convert to YYYY-MM-DD.
-- invoiceNumber: The order or invoice ID. Look for labels like 'INV #', 'Order No', etc.
-- totalCost: The final grand total balance due. (Must be a number).
-- items: An array of products listed in the table.
+- vendorName: The supplier company.
+- date: Invoice date (YYYY-MM-DD).
+- invoiceNumber: The order or invoice ID.
+- totalCost: The final grand total balance due. 
+- items: An array of every product listed in the table.
 
 FOR EACH ITEM:
-- name: The description of the item.
-- quantity: Usually a number before the price.
-- unitPrice: Price per unit.
-- cost: Total for that line.
+- name: Full description.
+- quantity: Number of units.
+- unitPrice: Price per single unit.
+- cost: Total extended price for that line (qty * price).
 - unit: e.g. 'Case', 'LB', 'EA'.
 - vendorSku: Product ID code.
 
 RULES:
-1. Return RAW JSON ONLY. No explanation or extra text.
-2. If vendor name isn't clear, pick the most prominent company header.
-3. Skip header/footer rows in the 'items' array.
+1. Return RAW JSON ONLY. 
+2. BE EXHAUSTIVE: If the transcript has 10 lines of products, the JSON must have 10 items.
+3. Use the headers to distinguish between 'Unit Price' and 'Total Line Cost'.
 
 RAW TEXT:
 """
