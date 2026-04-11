@@ -255,15 +255,15 @@ def main():
     df_stock.to_csv(STOCK_CSV_PATH, index=False)
     df_invoices.to_csv(INVOICE_CSV_PATH, index=False)
 
-    print(f"\n✅  Files written:")
+    print(f"\n[OK]  Files written:")
     print(f"   Stock snapshot : {STOCK_CSV_PATH}")
     print(f"                    {len(df_stock)} products")
     print(f"   Invoice history: {INVOICE_CSV_PATH}")
     print(f"                    {len(df_invoices):,} rows  |  "
           f"{df_invoices['invoice_date'].nunique()} unique invoice dates  |  "
-          f"date range {df_invoices['invoice_date'].min()} → {df_invoices['invoice_date'].max()}")
+          f"date range {df_invoices['invoice_date'].min()} -> {df_invoices['invoice_date'].max()}")
     print()
-    print("▶  Run `python demand_forecast_csv_demo.py` to train and test the model")
+    print(">>  Run `python demand_forecast_csv_demo.py` to train and test the model")
     print("   using only these CSV files (no database required).")
 
 

@@ -1,0 +1,29 @@
+FoodProductId,ProductName,CategoryName,open_market_qty,grocery_store_qty,StockLevel,predicted_open_market,predicted_grocery_store,restock_open_market,restock_grocery_store,restock_total
+10,White Bread,Bakery,0,1,Low,17,18,17,17,34
+5,Spinach,Produce,1,3,Low,13,11,12,8,20
+3,Carrots,Produce,24,36,High,24,36,0,0,0
+28,Salmon Fillet,Meat & Seafood,17,29,Medium,17,29,0,0,0
+25,Peanut Butter,Snacks,21,25,Medium,21,25,0,0,0
+22,Sparkling Water,Beverages,20,36,Medium,20,36,0,0,0
+4,Potatoes,Produce,38,22,High,38,22,0,0,0
+21,Apple Juice,Beverages,28,17,Medium,28,17,0,0,0
+20,Orange Juice,Beverages,37,49,High,37,49,0,0,0
+19,Ice Cream,Frozen Foods,26,34,High,26,34,0,0,0
+18,Frozen Pizza,Frozen Foods,12,27,Medium,12,27,0,0,0
+15,Chicken Broth,Canned Goods,31,42,High,31,42,0,0,0
+16,Corn,Canned Goods,35,52,High,35,52,0,0,0
+8,Greek Yogurt,Dairy,22,31,Medium,22,31,0,0,0
+1,Apples,Produce,26,16,Medium,26,16,0,0,0
+23,Granola Bars,Snacks,11,22,Medium,11,22,0,0,0
+11,Whole Wheat Bread,Bakery,35,51,High,35,51,0,0,0
+14,Black Beans,Canned Goods,15,23,Medium,15,23,0,0,0
+26,Chicken Breast,Meat & Seafood,25,31,Medium,25,31,0,0,0
+9,Butter,Dairy,9,24,Medium,9,24,0,0,0
+7,Cheddar Cheese,Dairy,9,21,Medium,9,21,0,0,0
+24,Crackers,Snacks,13,30,Medium,13,30,0,0,0
+12,Dinner Rolls,Bakery,15,17,Medium,15,17,0,0,0
+6,Whole Milk,Dairy,24,60,High,24,60,0,0,0
+13,Canned Tomatoes,Canned Goods,52,42,High,52,42,0,0,0
+2,Bananas,Produce,21,35,Medium,21,35,0,0,0
+27,Ground Beef,Meat & Seafood,18,62,High,18,62,0,0,0
+17,Frozen Peas,Frozen Foods,23,52,High,23,52,0,0,0

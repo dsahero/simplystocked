@@ -95,14 +95,14 @@ def main():
         mode       = "full"
         since_date = None
         if force_retrain:
-            print("\n🔄  --retrain flag detected. Performing full retrain from scratch.")
+            print("\n[RETRAIN]  --retrain flag detected. Performing full retrain from scratch.")
         else:
-            print("\n🆕  No saved models found. Performing initial full training.")
+            print("\n[NEW]  No saved models found. Performing initial full training.")
     else:
         mode       = "incremental"
         since_date = last_date
-        print(f"\n⚡  Saved models found (last trained: {state.get('trained_at', 'unknown')}).")
-        print(f"    Loading incrementally — only invoices after {since_date or 'beginning'}.")
+        print(f"\n[INCR]  Saved models found (last trained: {state.get('trained_at', 'unknown')}).")
+        print(f"    Loading incrementally -- only invoices after {since_date or 'beginning'}.")
 
     print("Loading CSV data...")
     df_stock, df_invoice_new = load_csv_data(
@@ -116,7 +116,7 @@ def main():
         df_invoice_all = df_invoice_new
 
     if df_invoice_new.empty and mode == "incremental":
-        print("\n✅  No new invoices since last run. Models are already up to date.")
+        print("\n[OK]  No new invoices since last run. Models are already up to date.")
         print("    Loading saved models to generate fresh recommendations...\n")
         model_om, model_gs = load_saved_models()
         df_features_all    = build_features(df_stock, df_invoice_all)
@@ -129,7 +129,7 @@ def main():
         return
 
     if df_invoice_new.empty and mode == "full":
-        print("\n⚠️  No invoice data found in CSV. Run generate_sample_data.py first.\n")
+        print("\n[WARN]  No invoice data found in CSV. Run generate_sample_data.py first.\n")
         return
 
     new_count = len(df_invoice_new)
@@ -143,7 +143,7 @@ def main():
         .groupby("month")["qty_received"]
         .sum()
     )
-    print("  Monthly qty_received (sample — last 6 months):")
+    print("  Monthly qty_received (sample -- last 6 months):")
     print(monthly.tail(6).to_string())
     print()
 
