@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ClipboardCheck, Plus, Calendar, Loader2, AlertCircle, X, CheckCircle2,
-  ChevronRight, ChevronDown, ArrowRightLeft, Package, BarChart3, Filter,
+  ChevronRight, ChevronDown, ArrowRightLeft, Package, BarChart3, Filter, ClipboardList, Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -9,8 +9,9 @@ import {
   getAllCheckpoints, createCheckpoint, getTransactionsByCheckpoint, getYearEndSummary, rollover,
   ApiCheckpoint, ApiTransaction, ApiYearEndSummary, ApiRolloverResult,
 } from '../api/checkpoints';
+import { getAllStock, setStockBaseline, ApiStock } from '../api/inventory';
 
-type TabType = 'checkpoints' | 'rollover';
+type TabType = 'checkpoints' | 'baseline' | 'rollover';
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -42,6 +43,15 @@ export default function CheckpointsPage() {
   const [rolloverLoading, setRolloverLoading] = useState(false);
   const [rolloverResult, setRolloverResult] = useState<ApiRolloverResult | null>(null);
 
+  // Baseline tab state
+  const [stockItems, setStockItems] = useState<ApiStock[]>([]);
+  const [baselineCounts, setBaselineCounts] = useState<Record<number, { om: string; gs: string }>>({});
+  const [baselineSearch, setBaselineSearch] = useState('');
+  const [baselineLoading, setBaselineLoading] = useState(false);
+  const [baselineSaving, setBaselineSaving] = useState(false);
+  const [baselineSuccess, setBaselineSuccess] = useState(false);
+  const [baselineChanged, setBaselineChanged] = useState<Set<number>>(new Set());
+
   useEffect(() => { loadCheckpoints(); }, []);
 
   const loadCheckpoints = async () => {
@@ -50,6 +60,54 @@ export default function CheckpointsPage() {
       setCheckpoints(await getAllCheckpoints());
     } catch { setError('Failed to load checkpoints.'); }
     finally { setLoading(false); }
+  };
+
+  const loadBaseline = async () => {
+    setBaselineLoading(true);
+    try {
+      const items = await getAllStock();
+      setStockItems(items);
+      // Pre-fill counts with current values
+      const counts: Record<number, { om: string; gs: string }> = {};
+      for (const item of items) {
+        counts[item.FoodProductId] = {
+          om: String(item.OpenMarketQuantity),
+          gs: String(item.GroceryStoreQuantity),
+        };
+      }
+      setBaselineCounts(counts);
+      setBaselineChanged(new Set());
+      setBaselineSuccess(false);
+    } catch { setError('Failed to load stock data.'); }
+    finally { setBaselineLoading(false); }
+  };
+
+  const handleBaselineChange = (productId: number, field: 'om' | 'gs', value: string) => {
+    setBaselineCounts(prev => ({ ...prev, [productId]: { ...prev[productId], [field]: value } }));
+    setBaselineChanged(prev => new Set(prev).add(productId));
+  };
+
+  const handleBaselineSave = async () => {
+    if (baselineChanged.size === 0) return;
+    setBaselineSaving(true);
+    setError('');
+    try {
+      const promises = Array.from(baselineChanged).map(pid => {
+        const c = baselineCounts[pid];
+        return setStockBaseline(pid, Number(c?.om) || 0, Number(c?.gs) || 0);
+      });
+      await Promise.all(promises);
+      setBaselineSuccess(true);
+      setBaselineChanged(new Set());
+      // Refresh to show updated stock levels
+      const items = await getAllStock();
+      setStockItems(items);
+      setTimeout(() => setBaselineSuccess(false), 4000);
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to save baseline counts.');
+    } finally {
+      setBaselineSaving(false);
+    }
   };
 
   // ── Create checkpoint ───────────────────────────────────────────────
@@ -145,6 +203,7 @@ export default function CheckpointsPage() {
 
   const tabs: { id: TabType; name: string; icon: typeof ClipboardCheck }[] = [
     { id: 'checkpoints', name: 'Checkpoints', icon: ClipboardCheck },
+    { id: 'baseline', name: 'Set Baseline', icon: ClipboardList },
     { id: 'rollover', name: 'Year-End Rollover', icon: ArrowRightLeft },
   ];
 
@@ -259,6 +318,202 @@ export default function CheckpointsPage() {
       )}
 
       {/* ── Rollover tab ─────────────────────────────────────────────────── */}
+      {/* ── Baseline tab ────────────────────────────────────────────────── */}
+      {activeTab === 'baseline' && (
+        <div className="space-y-6">
+          {/* Header card */}
+          <div className="rounded-[40px] border border-forest/5 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-sm">
+            <div className="flex items-center gap-5 mb-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-brown/10 text-brown">
+                <ClipboardList className="h-7 w-7" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-display font-bold text-forest dark:text-white">Physical Count & Set Baseline</h2>
+                <p className="text-sm text-forest/40 dark:text-neutral-400 font-medium">
+                  Enter actual counts from a physical inventory check. Only changed items will be updated.
+                </p>
+              </div>
+              {!stockItems.length && (
+                <button
+                  onClick={loadBaseline}
+                  disabled={baselineLoading}
+                  className="flex items-center gap-2 rounded-2xl bg-brown px-6 py-3 text-sm font-bold text-white shadow-xl shadow-brown/20 hover:bg-brown-dark transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {baselineLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Package className="h-5 w-5" />}
+                  Load Current Stock
+                </button>
+              )}
+            </div>
+          </div>
+
+          {baselineSuccess && (
+            <div className="flex items-center gap-3 rounded-2xl bg-green-50 dark:bg-green-900/20 p-5 border border-green-100 dark:border-green-900/30">
+              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-sm font-bold text-green-700 dark:text-green-400">Baseline updated successfully! {baselineChanged.size === 0 ? 'All counts saved.' : ''}</p>
+            </div>
+          )}
+
+          {baselineLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-brown" />
+            </div>
+          )}
+
+          {stockItems.length > 0 && !baselineLoading && (
+            <>
+              {/* Search + actions bar */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    type="text"
+                    placeholder="Search products…"
+                    value={baselineSearch}
+                    onChange={(e) => setBaselineSearch(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 py-2 pl-10 pr-4 text-sm focus:border-brown focus:outline-none focus:ring-2 focus:ring-brown/20 dark:text-white transition-all"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  {baselineChanged.size > 0 && (
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                      {baselineChanged.size} item{baselineChanged.size !== 1 ? 's' : ''} changed
+                    </span>
+                  )}
+                  <button
+                    onClick={loadBaseline}
+                    className="rounded-xl px-4 py-2 text-xs font-bold text-forest/50 dark:text-neutral-400 bg-forest/5 dark:bg-neutral-800 hover:bg-forest/10 transition-all"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={handleBaselineSave}
+                    disabled={baselineSaving || baselineChanged.size === 0}
+                    className="flex items-center gap-2 rounded-2xl bg-brown px-6 py-3 text-sm font-bold text-white shadow-xl shadow-brown/20 hover:bg-brown-dark transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {baselineSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    Save {baselineChanged.size > 0 ? `${baselineChanged.size} Change${baselineChanged.size !== 1 ? 's' : ''}` : 'Baseline'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Baseline table */}
+              <div className="overflow-hidden rounded-[32px] border border-forest/5 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-forest/5 dark:bg-neutral-800 text-[10px] font-bold uppercase tracking-widest text-forest/40 dark:text-neutral-400">
+                      <tr>
+                        <th className="px-6 py-4">Product</th>
+                        <th className="px-6 py-4">Stock Level</th>
+                        <th className="px-6 py-4 text-center">System Total</th>
+                        <th className="px-6 py-4 text-center">Open Market Count</th>
+                        <th className="px-6 py-4 text-center">Grocery Count</th>
+                        <th className="px-6 py-4 text-center">New Total</th>
+                        <th className="px-6 py-4 text-center">Difference</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-forest/5 dark:divide-neutral-800">
+                      {stockItems
+                        .filter(item => !baselineSearch.trim() || item.ProductName.toLowerCase().includes(baselineSearch.toLowerCase()))
+                        .map((item) => {
+                          const counts = baselineCounts[item.FoodProductId];
+                          const newOm = Number(counts?.om) || 0;
+                          const newGs = Number(counts?.gs) || 0;
+                          const newTotal = newOm + newGs;
+                          const diff = newTotal - item.Quantity;
+                          const isChanged = baselineChanged.has(item.FoodProductId);
+
+                          return (
+                            <tr
+                              key={item.FoodProductId}
+                              className={cn(
+                                'transition-colors',
+                                isChanged ? 'bg-amber-50/50 dark:bg-amber-900/5' : 'hover:bg-cream/50 dark:hover:bg-neutral-800/50'
+                              )}
+                            >
+                              <td className="px-6 py-3.5">
+                                <div className="font-bold text-forest dark:text-white">{item.ProductName}</div>
+                              </td>
+                              <td className="px-6 py-3.5">
+                                <span className={cn(
+                                  'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold',
+                                  item.StockLevel === 'Low' && 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+                                  item.StockLevel === 'Medium' && 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
+                                  item.StockLevel === 'High' && 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+                                )}>
+                                  {item.StockLevel}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3.5 text-center font-medium text-forest/50 dark:text-neutral-500">
+                                {item.Quantity}
+                              </td>
+                              <td className="px-6 py-3.5 text-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={counts?.om ?? ''}
+                                  onChange={(e) => handleBaselineChange(item.FoodProductId, 'om', e.target.value)}
+                                  className={cn(
+                                    'w-20 rounded-xl border bg-cream/20 dark:bg-neutral-950 px-3 py-2 text-sm font-bold text-center focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all mx-auto',
+                                    isChanged ? 'border-amber-300 focus:border-amber-400' : 'border-forest/10 dark:border-neutral-700 focus:border-brown'
+                                  )}
+                                />
+                              </td>
+                              <td className="px-6 py-3.5 text-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={counts?.gs ?? ''}
+                                  onChange={(e) => handleBaselineChange(item.FoodProductId, 'gs', e.target.value)}
+                                  className={cn(
+                                    'w-20 rounded-xl border bg-cream/20 dark:bg-neutral-950 px-3 py-2 text-sm font-bold text-center focus:outline-none focus:ring-4 focus:ring-brown/5 dark:text-white transition-all mx-auto',
+                                    isChanged ? 'border-amber-300 focus:border-amber-400' : 'border-forest/10 dark:border-neutral-700 focus:border-brown'
+                                  )}
+                                />
+                              </td>
+                              <td className="px-6 py-3.5 text-center">
+                                <span className={cn(
+                                  'font-bold',
+                                  isChanged ? 'text-forest dark:text-white' : 'text-forest/50 dark:text-neutral-500'
+                                )}>
+                                  {newTotal}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3.5 text-center">
+                                {isChanged ? (
+                                  <span className={cn(
+                                    'font-bold text-sm',
+                                    diff > 0 && 'text-green-600',
+                                    diff < 0 && 'text-red-600',
+                                    diff === 0 && 'text-forest/30 dark:text-neutral-600',
+                                  )}>
+                                    {diff > 0 ? '+' : ''}{diff}
+                                  </span>
+                                ) : (
+                                  <span className="text-forest/20 dark:text-neutral-700">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!stockItems.length && !baselineLoading && (
+            <div className="rounded-[32px] border-2 border-dashed border-forest/10 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 py-16 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-forest/5 mb-4">
+                <ClipboardList className="h-8 w-8 text-forest/20" />
+              </div>
+              <p className="text-lg font-display font-bold text-forest/40 dark:text-neutral-500">Click "Load Current Stock" to begin a physical count.</p>
+              <p className="text-sm text-forest/30 dark:text-neutral-600 mt-1">You'll see all products with their current quantities, and enter the actual counts.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'rollover' && (
         <div className="max-w-3xl mx-auto space-y-8">
           {/* Select checkpoint */}
