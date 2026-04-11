@@ -16,13 +16,13 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `brand`
+-- Table structure for table `Brand`
 --
 
-DROP TABLE IF EXISTS `brand`;
+DROP TABLE IF EXISTS `Brand`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `brand` (
+CREATE TABLE `Brand` (
   `BrandId` int NOT NULL AUTO_INCREMENT,
   `BrandName` varchar(255) NOT NULL,
   PRIMARY KEY (`BrandId`)
@@ -30,23 +30,23 @@ CREATE TABLE `brand` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `brand`
+-- Dumping data for table `Brand`
 --
 
-LOCK TABLES `brand` WRITE;
-/*!40000 ALTER TABLE `brand` DISABLE KEYS */;
-INSERT INTO `brand` VALUES (1,'Great Value'),(2,'Nature\'s Own'),(3,'Del Monte'),(4,'General Mills');
-/*!40000 ALTER TABLE `brand` ENABLE KEYS */;
+LOCK TABLES `Brand` WRITE;
+/*!40000 ALTER TABLE `Brand` DISABLE KEYS */;
+INSERT INTO `Brand` VALUES (1,'Great Value'),(2,'Nature\'s Own'),(3,'Del Monte'),(4,'General Mills');
+/*!40000 ALTER TABLE `Brand` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `category`
+-- Table structure for table `Category`
 --
 
-DROP TABLE IF EXISTS `category`;
+DROP TABLE IF EXISTS `Category`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `category` (
+CREATE TABLE `Category` (
   `CategoryId` int NOT NULL AUTO_INCREMENT,
   `CategoryName` varchar(255) NOT NULL,
   PRIMARY KEY (`CategoryId`)
@@ -54,23 +54,23 @@ CREATE TABLE `category` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `category`
+-- Dumping data for table `Category`
 --
 
-LOCK TABLES `category` WRITE;
-/*!40000 ALTER TABLE `category` DISABLE KEYS */;
-INSERT INTO `category` VALUES (1,'Produce'),(2,'Dairy'),(3,'Dairy Substitutes'),(4,'Protein'),(5,'Non-Perishables'),(6,'Grains');
-/*!40000 ALTER TABLE `category` ENABLE KEYS */;
+LOCK TABLES `Category` WRITE;
+/*!40000 ALTER TABLE `Category` DISABLE KEYS */;
+INSERT INTO `Category` VALUES (1,'Produce'),(2,'Dairy'),(3,'Dairy Substitutes'),(4,'Protein'),(5,'Non-Perishables'),(6,'Grains');
+/*!40000 ALTER TABLE `Category` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `checkpoint`
+-- Table structure for table `CheckPoint`
 --
 
-DROP TABLE IF EXISTS `checkpoint`;
+DROP TABLE IF EXISTS `CheckPoint`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `checkpoint` (
+CREATE TABLE `CheckPoint` (
   `CheckPointId` int NOT NULL AUTO_INCREMENT,
   `Date` date DEFAULT NULL,
   `StartDate` date DEFAULT NULL,
@@ -80,23 +80,23 @@ CREATE TABLE `checkpoint` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `checkpoint`
+-- Dumping data for table `CheckPoint`
 --
 
-LOCK TABLES `checkpoint` WRITE;
-/*!40000 ALTER TABLE `checkpoint` DISABLE KEYS */;
-INSERT INTO `checkpoint` VALUES (1,'2025-12-31','2025-08-01','2025-12-31'),(2,'2026-04-08','2026-01-01','2026-04-30');
-/*!40000 ALTER TABLE `checkpoint` ENABLE KEYS */;
+LOCK TABLES `CheckPoint` WRITE;
+/*!40000 ALTER TABLE `CheckPoint` DISABLE KEYS */;
+INSERT INTO `CheckPoint` VALUES (1,'2025-12-31','2025-08-01','2025-12-31'),(2,'2026-04-08','2026-01-01','2026-04-30');
+/*!40000 ALTER TABLE `CheckPoint` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `foodproduct`
+-- Table structure for table `FoodProduct`
 --
 
-DROP TABLE IF EXISTS `foodproduct`;
+DROP TABLE IF EXISTS `FoodProduct`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `foodproduct` (
+CREATE TABLE `FoodProduct` (
   `FoodProductId` int NOT NULL AUTO_INCREMENT,
   `ProductName` varchar(255) NOT NULL,
   `ProductPrice` decimal(10,2) DEFAULT NULL,
@@ -105,29 +105,29 @@ CREATE TABLE `foodproduct` (
   PRIMARY KEY (`FoodProductId`),
   KEY `CategoryId` (`CategoryId`),
   KEY `fk_foodproduct_stocksnapshot` (`StockLevelId`),
-  CONSTRAINT `fk_foodproduct_stocksnapshot` FOREIGN KEY (`StockLevelId`) REFERENCES `stocksnapshot` (`StockLevelId`),
-  CONSTRAINT `foodproduct_ibfk_1` FOREIGN KEY (`CategoryId`) REFERENCES `category` (`CategoryId`)
+  CONSTRAINT `fk_foodproduct_stocksnapshot` FOREIGN KEY (`StockLevelId`) REFERENCES `StockSnapshot` (`StockLevelId`),
+  CONSTRAINT `foodproduct_ibfk_1` FOREIGN KEY (`CategoryId`) REFERENCES `Category` (`CategoryId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `foodproduct`
+-- Dumping data for table `FoodProduct`
 --
 
-LOCK TABLES `foodproduct` WRITE;
-/*!40000 ALTER TABLE `foodproduct` DISABLE KEYS */;
-INSERT INTO `foodproduct` VALUES (1,'Whole Milk (1 gal)',2.99,1,2),(2,'White Bread (loaf)',1.49,2,6),(3,'Canned Corn (15 oz)',0.89,3,5),(4,'Canned Green Beans (15 oz)',0.89,4,5),(5,'Canned Chicken (12.5 oz)',2.49,5,4),(6,'Peanut Butter (16 oz)',3.99,6,4),(7,'Brown Rice (2 lb)',2.49,7,6),(8,'Penne Pasta (1 lb)',1.29,8,6),(9,'Oat Milk (64 oz)',3.99,9,3),(10,'Canned Diced Tomatoes',1.19,10,5),(11,'Eggs (dozen)',3.49,11,4),(12,'Apples (3 lb bag)',3.99,12,1),(13,'Bananas (bunch)',1.49,13,1),(14,'Baby Carrots (1 lb)',1.99,14,1),(15,'Chicken Breast (2 lb)',5.99,15,4);
-/*!40000 ALTER TABLE `foodproduct` ENABLE KEYS */;
+LOCK TABLES `FoodProduct` WRITE;
+/*!40000 ALTER TABLE `FoodProduct` DISABLE KEYS */;
+INSERT INTO `FoodProduct` VALUES (1,'Whole Milk (1 gal)',2.99,1,2),(2,'White Bread (loaf)',1.49,2,6),(3,'Canned Corn (15 oz)',0.89,3,5),(4,'Canned Green Beans (15 oz)',0.89,4,5),(5,'Canned Chicken (12.5 oz)',2.49,5,4),(6,'Peanut Butter (16 oz)',3.99,6,4),(7,'Brown Rice (2 lb)',2.49,7,6),(8,'Penne Pasta (1 lb)',1.29,8,6),(9,'Oat Milk (64 oz)',3.99,9,3),(10,'Canned Diced Tomatoes',1.19,10,5),(11,'Eggs (dozen)',3.49,11,4),(12,'Apples (3 lb bag)',3.99,12,1),(13,'Bananas (bunch)',1.49,13,1),(14,'Baby Carrots (1 lb)',1.99,14,1),(15,'Chicken Breast (2 lb)',5.99,15,4);
+/*!40000 ALTER TABLE `FoodProduct` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invoice`
+-- Table structure for table `Invoice`
 --
 
-DROP TABLE IF EXISTS `invoice`;
+DROP TABLE IF EXISTS `Invoice`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `invoice` (
+CREATE TABLE `Invoice` (
   `InvoiceId` int NOT NULL AUTO_INCREMENT,
   `Date` date DEFAULT NULL,
   `Desc` text,
@@ -141,31 +141,31 @@ CREATE TABLE `invoice` (
   KEY `InvoiceFromId` (`InvoiceFromId`),
   KEY `InvoiceBillToId` (`InvoiceBillToId`),
   KEY `InvoiceDeliveryId` (`InvoiceDeliveryId`),
-  CONSTRAINT `invoice_ibfk_1` FOREIGN KEY (`VendorId`) REFERENCES `vendor` (`VendorId`),
-  CONSTRAINT `invoice_ibfk_2` FOREIGN KEY (`InvoiceFromId`) REFERENCES `invoiceaddressdetails` (`InvoiceAddressDetailsId`),
-  CONSTRAINT `invoice_ibfk_3` FOREIGN KEY (`InvoiceBillToId`) REFERENCES `invoiceaddressdetails` (`InvoiceAddressDetailsId`),
-  CONSTRAINT `invoice_ibfk_4` FOREIGN KEY (`InvoiceDeliveryId`) REFERENCES `invoiceaddressdetails` (`InvoiceAddressDetailsId`)
+  CONSTRAINT `invoice_ibfk_1` FOREIGN KEY (`VendorId`) REFERENCES `Vendor` (`VendorId`),
+  CONSTRAINT `invoice_ibfk_2` FOREIGN KEY (`InvoiceFromId`) REFERENCES `InvoiceAddressDetails` (`InvoiceAddressDetailsId`),
+  CONSTRAINT `invoice_ibfk_3` FOREIGN KEY (`InvoiceBillToId`) REFERENCES `InvoiceAddressDetails` (`InvoiceAddressDetailsId`),
+  CONSTRAINT `invoice_ibfk_4` FOREIGN KEY (`InvoiceDeliveryId`) REFERENCES `InvoiceAddressDetails` (`InvoiceAddressDetailsId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `invoice`
+-- Dumping data for table `Invoice`
 --
 
-LOCK TABLES `invoice` WRITE;
-/*!40000 ALTER TABLE `invoice` DISABLE KEYS */;
-INSERT INTO `invoice` VALUES (1,'2026-01-15','January non-perishables donation',202.10,1,1,2,3),(2,'2026-02-10','February produce from Homefield Farm',317.91,2,4,5,6),(3,'2026-03-05','March mixed goods from NRV Food Bank',259.78,3,7,8,9);
-/*!40000 ALTER TABLE `invoice` ENABLE KEYS */;
+LOCK TABLES `Invoice` WRITE;
+/*!40000 ALTER TABLE `Invoice` DISABLE KEYS */;
+INSERT INTO `Invoice` VALUES (1,'2026-01-15','January non-perishables donation',202.10,1,1,2,3),(2,'2026-02-10','February produce from Homefield Farm',317.91,2,4,5,6),(3,'2026-03-05','March mixed goods from NRV Food Bank',259.78,3,7,8,9);
+/*!40000 ALTER TABLE `Invoice` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invoiceaddressdetails`
+-- Table structure for table `InvoiceAddressDetails`
 --
 
-DROP TABLE IF EXISTS `invoiceaddressdetails`;
+DROP TABLE IF EXISTS `InvoiceAddressDetails`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `invoiceaddressdetails` (
+CREATE TABLE `InvoiceAddressDetails` (
   `InvoiceAddressDetailsId` int NOT NULL AUTO_INCREMENT,
   `Attn` varchar(255) DEFAULT NULL,
   `Address` varchar(255) DEFAULT NULL,
@@ -179,23 +179,23 @@ CREATE TABLE `invoiceaddressdetails` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `invoiceaddressdetails`
+-- Dumping data for table `InvoiceAddressDetails`
 --
 
-LOCK TABLES `invoiceaddressdetails` WRITE;
-/*!40000 ALTER TABLE `invoiceaddressdetails` DISABLE KEYS */;
-INSERT INTO `invoiceaddressdetails` VALUES (1,'Donations Coordinator','1025 Electric Rd','Salem','VA','24153','540-342-3011','contact@feedingswva.org'),(2,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(3,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(4,'Farm Manager','595 Prices Fork Rd','Blacksburg','VA','24061','540-231-0001','homefield@vt.edu'),(5,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(6,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(7,'Distribution Team','1573 N Franklin St','Christiansburg','VA','24073','540-381-1080','info@nrvfoodbank.org'),(8,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(9,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu');
-/*!40000 ALTER TABLE `invoiceaddressdetails` ENABLE KEYS */;
+LOCK TABLES `InvoiceAddressDetails` WRITE;
+/*!40000 ALTER TABLE `InvoiceAddressDetails` DISABLE KEYS */;
+INSERT INTO `InvoiceAddressDetails` VALUES (1,'Donations Coordinator','1025 Electric Rd','Salem','VA','24153','540-342-3011','contact@feedingswva.org'),(2,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(3,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(4,'Farm Manager','595 Prices Fork Rd','Blacksburg','VA','24061','540-231-0001','homefield@vt.edu'),(5,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(6,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(7,'Distribution Team','1573 N Franklin St','Christiansburg','VA','24073','540-381-1080','info@nrvfoodbank.org'),(8,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu'),(9,'The Market of VT','801 University City Blvd','Blacksburg','VA','24060','540-231-3086','themarket@vt.edu');
+/*!40000 ALTER TABLE `InvoiceAddressDetails` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invoiceitem`
+-- Table structure for table `InvoiceItem`
 --
 
-DROP TABLE IF EXISTS `invoiceitem`;
+DROP TABLE IF EXISTS `InvoiceItem`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `invoiceitem` (
+CREATE TABLE `InvoiceItem` (
   `InvoiceItemId` int NOT NULL AUTO_INCREMENT,
   `InvoiceId` int DEFAULT NULL,
   `FoodProductId` int DEFAULT NULL,
@@ -204,29 +204,29 @@ CREATE TABLE `invoiceitem` (
   PRIMARY KEY (`InvoiceItemId`),
   KEY `InvoiceId` (`InvoiceId`),
   KEY `FoodProductId` (`FoodProductId`),
-  CONSTRAINT `invoiceitem_ibfk_1` FOREIGN KEY (`InvoiceId`) REFERENCES `invoice` (`InvoiceId`),
-  CONSTRAINT `invoiceitem_ibfk_2` FOREIGN KEY (`FoodProductId`) REFERENCES `foodproduct` (`FoodProductId`)
+  CONSTRAINT `invoiceitem_ibfk_1` FOREIGN KEY (`InvoiceId`) REFERENCES `Invoice` (`InvoiceId`),
+  CONSTRAINT `invoiceitem_ibfk_2` FOREIGN KEY (`FoodProductId`) REFERENCES `FoodProduct` (`FoodProductId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `invoiceitem`
+-- Dumping data for table `InvoiceItem`
 --
 
-LOCK TABLES `invoiceitem` WRITE;
-/*!40000 ALTER TABLE `invoiceitem` DISABLE KEYS */;
-INSERT INTO `invoiceitem` VALUES (1,1,3,40,0.89),(2,1,4,25,0.89),(3,1,10,50,1.19),(4,1,5,10,2.49),(5,1,6,15,3.99),(6,2,12,20,3.99),(7,2,13,30,1.49),(8,2,14,25,1.99),(9,2,11,24,3.49),(10,2,15,10,5.99),(11,3,1,20,2.99),(12,3,2,30,1.49),(13,3,7,25,2.49),(14,3,8,35,1.29),(15,3,9,12,3.99);
-/*!40000 ALTER TABLE `invoiceitem` ENABLE KEYS */;
+LOCK TABLES `InvoiceItem` WRITE;
+/*!40000 ALTER TABLE `InvoiceItem` DISABLE KEYS */;
+INSERT INTO `InvoiceItem` VALUES (1,1,3,40,0.89),(2,1,4,25,0.89),(3,1,10,50,1.19),(4,1,5,10,2.49),(5,1,6,15,3.99),(6,2,12,20,3.99),(7,2,13,30,1.49),(8,2,14,25,1.99),(9,2,11,24,3.49),(10,2,15,10,5.99),(11,3,1,20,2.99),(12,3,2,30,1.49),(13,3,7,25,2.49),(14,3,8,35,1.29),(15,3,9,12,3.99);
+/*!40000 ALTER TABLE `InvoiceItem` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `stocksnapshot`
+-- Table structure for table `StockSnapshot`
 --
 
-DROP TABLE IF EXISTS `stocksnapshot`;
+DROP TABLE IF EXISTS `StockSnapshot`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `stocksnapshot` (
+CREATE TABLE `StockSnapshot` (
   `StockLevelId` int NOT NULL AUTO_INCREMENT,
   `FoodProductId` int DEFAULT NULL,
   `StockLevel` varchar(50) DEFAULT NULL,
@@ -236,54 +236,54 @@ CREATE TABLE `stocksnapshot` (
   `GroceryStoreQuantity` int DEFAULT NULL,
   PRIMARY KEY (`StockLevelId`),
   KEY `FoodProductId` (`FoodProductId`),
-  CONSTRAINT `stocksnapshot_ibfk_1` FOREIGN KEY (`FoodProductId`) REFERENCES `foodproduct` (`FoodProductId`)
+  CONSTRAINT `stocksnapshot_ibfk_1` FOREIGN KEY (`FoodProductId`) REFERENCES `FoodProduct` (`FoodProductId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `stocksnapshot`
+-- Dumping data for table `StockSnapshot`
 --
 
-LOCK TABLES `stocksnapshot` WRITE;
-/*!40000 ALTER TABLE `stocksnapshot` DISABLE KEYS */;
-INSERT INTO `stocksnapshot` VALUES (1,1,'Medium',30,'2026-04-08 19:04:04',15,15),(2,2,'High',60,'2026-04-08 19:04:04',30,30),(3,3,'High',80,'2026-04-08 19:04:04',40,40),(4,4,'Medium',45,'2026-04-08 19:04:04',20,25),(5,5,'Low',8,'2026-04-08 19:04:04',5,3),(6,6,'Medium',25,'2026-04-08 19:04:04',10,15),(7,7,'High',55,'2026-04-08 19:04:04',25,30),(8,8,'High',70,'2026-04-08 19:04:04',35,35),(9,9,'Low',6,'2026-04-08 19:04:04',4,2),(10,10,'High',90,'2026-04-08 19:04:04',45,45),(11,11,'Medium',24,'2026-04-08 19:04:04',12,12),(12,12,'Low',9,'2026-04-08 19:04:04',5,4),(13,13,'Medium',20,'2026-04-08 19:04:04',10,10),(14,14,'Low',7,'2026-04-08 19:04:04',4,3),(15,15,'Low',5,'2026-04-08 19:04:04',3,2);
-/*!40000 ALTER TABLE `stocksnapshot` ENABLE KEYS */;
+LOCK TABLES `StockSnapshot` WRITE;
+/*!40000 ALTER TABLE `StockSnapshot` DISABLE KEYS */;
+INSERT INTO `StockSnapshot` VALUES (1,1,'Medium',30,'2026-04-08 19:04:04',15,15),(2,2,'High',60,'2026-04-08 19:04:04',30,30),(3,3,'High',80,'2026-04-08 19:04:04',40,40),(4,4,'Medium',45,'2026-04-08 19:04:04',20,25),(5,5,'Low',8,'2026-04-08 19:04:04',5,3),(6,6,'Medium',25,'2026-04-08 19:04:04',10,15),(7,7,'High',55,'2026-04-08 19:04:04',25,30),(8,8,'High',70,'2026-04-08 19:04:04',35,35),(9,9,'Low',6,'2026-04-08 19:04:04',4,2),(10,10,'High',90,'2026-04-08 19:04:04',45,45),(11,11,'Medium',24,'2026-04-08 19:04:04',12,12),(12,12,'Low',9,'2026-04-08 19:04:04',5,4),(13,13,'Medium',20,'2026-04-08 19:04:04',10,10),(14,14,'Low',7,'2026-04-08 19:04:04',4,3),(15,15,'Low',5,'2026-04-08 19:04:04',3,2);
+/*!40000 ALTER TABLE `StockSnapshot` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `transaction`
+-- Table structure for table `Transaction`
 --
 
-DROP TABLE IF EXISTS `transaction`;
+DROP TABLE IF EXISTS `Transaction`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `transaction` (
+CREATE TABLE `Transaction` (
   `TransactionId` int NOT NULL AUTO_INCREMENT,
   `CheckPointId` int DEFAULT NULL,
   `TotalAmount` decimal(10,2) DEFAULT NULL,
   PRIMARY KEY (`TransactionId`),
   KEY `CheckPointId` (`CheckPointId`),
-  CONSTRAINT `transaction_ibfk_1` FOREIGN KEY (`CheckPointId`) REFERENCES `checkpoint` (`CheckPointId`)
+  CONSTRAINT `transaction_ibfk_1` FOREIGN KEY (`CheckPointId`) REFERENCES `CheckPoint` (`CheckPointId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `transaction`
+-- Dumping data for table `Transaction`
 --
 
-LOCK TABLES `transaction` WRITE;
-/*!40000 ALTER TABLE `transaction` DISABLE KEYS */;
-/*!40000 ALTER TABLE `transaction` ENABLE KEYS */;
+LOCK TABLES `Transaction` WRITE;
+/*!40000 ALTER TABLE `Transaction` DISABLE KEYS */;
+/*!40000 ALTER TABLE `Transaction` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `transactionitem`
+-- Table structure for table `TransactionItem`
 --
 
-DROP TABLE IF EXISTS `transactionitem`;
+DROP TABLE IF EXISTS `TransactionItem`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `transactionitem` (
+CREATE TABLE `TransactionItem` (
   `TransactionItemId` int NOT NULL AUTO_INCREMENT,
   `TransactionId` int DEFAULT NULL,
   `FoodProductId` int DEFAULT NULL,
@@ -291,54 +291,58 @@ CREATE TABLE `transactionitem` (
   PRIMARY KEY (`TransactionItemId`),
   KEY `TransactionId` (`TransactionId`),
   KEY `FoodProductId` (`FoodProductId`),
-  CONSTRAINT `transactionitem_ibfk_1` FOREIGN KEY (`TransactionId`) REFERENCES `transaction` (`TransactionId`),
-  CONSTRAINT `transactionitem_ibfk_2` FOREIGN KEY (`FoodProductId`) REFERENCES `foodproduct` (`FoodProductId`)
+  CONSTRAINT `transactionitem_ibfk_1` FOREIGN KEY (`TransactionId`) REFERENCES `Transaction` (`TransactionId`),
+  CONSTRAINT `transactionitem_ibfk_2` FOREIGN KEY (`FoodProductId`) REFERENCES `FoodProduct` (`FoodProductId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `transactionitem`
+-- Dumping data for table `TransactionItem`
 --
 
-LOCK TABLES `transactionitem` WRITE;
-/*!40000 ALTER TABLE `transactionitem` DISABLE KEYS */;
-/*!40000 ALTER TABLE `transactionitem` ENABLE KEYS */;
+LOCK TABLES `TransactionItem` WRITE;
+/*!40000 ALTER TABLE `TransactionItem` DISABLE KEYS */;
+/*!40000 ALTER TABLE `TransactionItem` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `users`
+-- Table structure for table `Users`
 --
 
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `Users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
+CREATE TABLE `Users` (
   `UserId` int NOT NULL AUTO_INCREMENT,
   `Username` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `Role` enum('admin','manager','user') NOT NULL,
-  PRIMARY KEY (`UserId`)
+  `Email` varchar(255) DEFAULT NULL,
+  `google_sub` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`UserId`),
+  UNIQUE KEY `uk_users_email` (`Email`),
+  UNIQUE KEY `uk_users_google_sub` (`google_sub`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `users`
+-- Dumping data for table `Users`
 --
 
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin','$2b$12$LQv3c1yqBWVHxkd0LHAkCO3V.OT4E5CKA1GsIv9JzW2.BgfK2Q5Vu','admin'),(2,'mgr_shannon','$2b$12$LQv3c1yqBWVHxkd0LHAkCO3V.OT4E5CKA1GsIv9JzW2.BgfK2Q5Vu','manager'),(3,'user_brenna','$2b$12$LQv3c1yqBWVHxkd0LHAkCO3V.OT4E5CKA1GsIv9JzW2.BgfK2Q5Vu','user'),(4,'user_ellie','$2b$12$LQv3c1yqBWVHxkd0LHAkCO3V.OT4E5CKA1GsIv9JzW2.BgfK2Q5Vu','user');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+LOCK TABLES `Users` WRITE;
+/*!40000 ALTER TABLE `Users` DISABLE KEYS */;
+INSERT INTO `Users` VALUES (1,'admin','$2b$12$CnRve/pywNCvnWGwacAZveAwIGDO.Gxkw.WNLNbgFz70KcUzgclb.','admin',NULL,NULL),(2,'mgr_shannon','$2b$12$CnRve/pywNCvnWGwacAZveAwIGDO.Gxkw.WNLNbgFz70KcUzgclb.','manager',NULL,NULL),(3,'user_brenna','$2b$12$CnRve/pywNCvnWGwacAZveAwIGDO.Gxkw.WNLNbgFz70KcUzgclb.','user',NULL,NULL),(4,'user_ellie','$2b$12$CnRve/pywNCvnWGwacAZveAwIGDO.Gxkw.WNLNbgFz70KcUzgclb.','user',NULL,NULL);
+/*!40000 ALTER TABLE `Users` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `vendor`
+-- Table structure for table `Vendor`
 --
 
-DROP TABLE IF EXISTS `vendor`;
+DROP TABLE IF EXISTS `Vendor`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `vendor` (
+CREATE TABLE `Vendor` (
   `VendorId` int NOT NULL AUTO_INCREMENT,
   `Email` varchar(255) DEFAULT NULL,
   `Phone` varchar(20) DEFAULT NULL,
@@ -351,13 +355,13 @@ CREATE TABLE `vendor` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `vendor`
+-- Dumping data for table `Vendor`
 --
 
-LOCK TABLES `vendor` WRITE;
-/*!40000 ALTER TABLE `vendor` DISABLE KEYS */;
-INSERT INTO `vendor` VALUES (1,'contact@feedingswva.org','540-342-3011','1025 Electric Rd','Salem','VA','24153'),(2,'homefield@vt.edu','540-231-0001','595 Prices Fork Rd','Blacksburg','VA','24061'),(3,'info@nrvfoodbank.org','540-381-1080','1573 N Franklin St','Christiansburg','VA','24073');
-/*!40000 ALTER TABLE `vendor` ENABLE KEYS */;
+LOCK TABLES `Vendor` WRITE;
+/*!40000 ALTER TABLE `Vendor` DISABLE KEYS */;
+INSERT INTO `Vendor` VALUES (1,'contact@feedingswva.org','540-342-3011','1025 Electric Rd','Salem','VA','24153'),(2,'homefield@vt.edu','540-231-0001','595 Prices Fork Rd','Blacksburg','VA','24061'),(3,'info@nrvfoodbank.org','540-381-1080','1573 N Franklin St','Christiansburg','VA','24073');
+/*!40000 ALTER TABLE `Vendor` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
