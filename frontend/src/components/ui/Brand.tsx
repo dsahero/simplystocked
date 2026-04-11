@@ -1,31 +1,17 @@
 import React from 'react';
 
 /**
- * SimplyStocked Logo with Text
- * REPLACE the SVG content below with your SimplyStocked logo SVG.
+ * SimplyStocked Banner Logo
+ * Renders the SimplyStockedBanner.png image.
+ * className is forwarded for sizing (e.g. h-12, h-20, w-auto).
  */
 export const BrandLogo = ({ className }: { className?: string }) => (
-  <svg 
-    viewBox="0 0 200 50" 
-    className={className} 
-    fill="none" 
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* Placeholder SVG - Replace this entire block */}
-    <rect width="200" height="50" rx="12" fill="currentColor" fillOpacity="0.1" />
-    <text 
-      x="50%" 
-      y="50%" 
-      dominantBaseline="middle" 
-      textAnchor="middle" 
-      fill="currentColor" 
-      fontSize="20" 
-      fontWeight="bold"
-      fontFamily="sans-serif"
-    >
-      SimplyStocked
-    </text>
-  </svg>
+  <img
+    src="/icons/SimplyStockedBanner.png"
+    alt="SimplyStocked"
+    className={className}
+    style={{ objectFit: 'contain' }}
+  />
 );
 
 /**
