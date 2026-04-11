@@ -103,8 +103,13 @@ def set_product_stock_level(db: Session, product_id: int, stock_level_id: int):
 
 
 def delete_product(db: Session, product_id: int):
-    db.execute(
-        text("DELETE FROM FoodProduct WHERE FoodProductId = :product_id"),
-        {"product_id": product_id}
-    )
+    # Remove child rows that reference this product
+    db.execute(text("DELETE FROM StockHistory WHERE FoodProductId = :pid"), {"pid": product_id})
+    db.execute(text("DELETE FROM Waste WHERE FoodProductId = :pid"), {"pid": product_id})
+    db.execute(text("DELETE FROM TransactionItem WHERE FoodProductId = :pid"), {"pid": product_id})
+    db.execute(text("DELETE FROM InvoiceItem WHERE FoodProductId = :pid"), {"pid": product_id})
+    # Unlink stock snapshot, then delete it
+    db.execute(text("UPDATE FoodProduct SET StockLevelId = NULL WHERE FoodProductId = :pid"), {"pid": product_id})
+    db.execute(text("DELETE FROM StockSnapshot WHERE FoodProductId = :pid"), {"pid": product_id})
+    db.execute(text("DELETE FROM FoodProduct WHERE FoodProductId = :pid"), {"pid": product_id})
     db.commit()

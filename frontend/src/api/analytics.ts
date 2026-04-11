@@ -29,6 +29,12 @@ export interface DashboardStats {
   total_stock: number;
   low_stock_count: number;
   vendor_count: number;
+  total_transactions: number;
+  total_transaction_value: number;
+  total_invoices: number;
+  total_invoice_spending: number;
+  total_waste_units: number;
+  total_waste_cost: number;
 }
 
 export function getDashboardStats() {

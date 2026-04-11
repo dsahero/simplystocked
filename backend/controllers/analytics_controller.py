@@ -11,6 +11,12 @@ def get_dashboard_stats(db: Session) -> dict:
         "total_stock": live["total_stock"] if live else 0,
         "low_stock_count": live["low_stock_count"] if live else 0,
         "vendor_count": live["vendor_count"] if live else 0,
+        "total_transactions": live["total_transactions"] if live else 0,
+        "total_transaction_value": float(live["total_transaction_value"]) if live else 0,
+        "total_invoices": live["total_invoices"] if live else 0,
+        "total_invoice_spending": float(live["total_invoice_spending"]) if live else 0,
+        "total_waste_units": live["total_waste_units"] if live else 0,
+        "total_waste_cost": float(live["total_waste_cost"]) if live else 0,
     }
 
 
