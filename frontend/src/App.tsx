@@ -14,6 +14,7 @@ import AccountPage from './pages/AccountPage';
 import VendorsPage from './pages/VendorsPage';
 import CheckpointsPage from './pages/CheckpointsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import PredictionsPage from './pages/PredictionsPage';
 import AIAssistant from './components/ui/AIAssistant';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -89,6 +90,12 @@ export default function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/predictions" element={
+                <ProtectedRoute>
+                  <PredictionsPage />
+                </ProtectedRoute>
+              } />
+
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsPage />

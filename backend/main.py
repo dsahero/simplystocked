@@ -13,6 +13,7 @@ from routes import (
     checkpoint_routes,
     analytics_routes,
     waste_routes,
+    predictions_routes,
 )
 
 Base.metadata.create_all(bind=engine)
@@ -39,6 +40,7 @@ app.include_router(invoice_routes.router)
 app.include_router(checkpoint_routes.router)
 app.include_router(analytics_routes.router)
 app.include_router(waste_routes.router)
+app.include_router(predictions_routes.router)
 
 
 @app.on_event("startup")
