@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Package, BarChart2, Upload, Settings, LogOut, User, ChevronDown, LayoutDashboard, Moon, Sun, Truck, ClipboardCheck, Brain } from 'lucide-react';
+import { Menu, X, Package, BarChart2, Upload, Settings, LogOut, User, ChevronDown, LayoutDashboard, Moon, Sun, Truck, ClipboardCheck, Brain, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -27,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Vendors', icon: Truck, path: '/vendors' },
     { name: 'Checkpoints', icon: ClipboardCheck, path: '/checkpoints' },
     { name: 'Predictions', icon: Brain, path: '/predictions' },
+    { name: 'Team', icon: Users, path: '/team' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
